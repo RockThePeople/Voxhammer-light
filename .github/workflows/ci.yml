@@ -61,6 +61,33 @@ jobs:
         run: |
           if [ -d tests/cpu ]; then python -m pytest tests/cpu -q; else echo "tests/cpu 없음 (0-1 이전)"; fi
 
+  # 고객사 검증 스크립트 원본을 그대로 실행한다 (CPU fp32). 결과는 잡 로그에 남는다.
+  customer-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install numpy tqdm easydict trimesh scipy
+      - name: verify hashes
+        working-directory: tests/customer
+        run: sha256sum -c SHA256SUMS
+      - name: build reference
+        run: bash tools/setup_reference.sh
+      - name: v_stage1_cache
+        run: python -I tests/customer/v_stage1_cache.py build/reference 2>&1 | grep -v "it/s"
+      - name: v_stage2_misc
+        run: python -I tests/customer/v_stage2_misc.py build/reference
+      - name: v_cbin_direct
+        run: python -I tests/customer/v_cbin_direct.py third_party/ai-ar-v3
+
   gpu-a5000:
     if: github.event_name == 'workflow_dispatch' && inputs.gpu == 'a5000'
     runs-on: [self-hosted, a5000]
