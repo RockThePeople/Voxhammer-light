@@ -1,0 +1,84 @@
+# CPU 검사는 GitHub 호스티드 러너에서, GPU 검사는 워크스테이션 self-hosted 러너에서 돈다.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      gpu:
+        description: "GPU 잡 실행 (a5000 / rtx3090 / none)"
+        default: "none"
+
+jobs:
+  pins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: check reference pins
+        run: python3 tools/check_pins.py
+
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # ai-ar-v3 server/requirements.txt 에는 fastapi·python-multipart·httpx 가 없다.
+      # 이 셋이 없으면 360 이 아니라 339 passed · 14 skipped (· httpx 1 실패) 가 된다.
+      - name: install deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r third_party/ai-ar-v3/server/requirements.txt pytest fastapi python-multipart httpx
+      - name: conformance (expect 53/53)
+        working-directory: third_party/ai-ar-v3/contract/conformance
+        run: python run_conformance.py
+      - name: ai-ar-v3 server tests (expect 360 passed)
+        working-directory: third_party/ai-ar-v3
+        run: python -m pytest server/tests/ -q
+
+  cpu-equivalence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements-cpu.txt ]; then python -m pip install -r requirements-cpu.txt; fi
+          python -m pip install pytest
+      - name: tests/cpu
+        run: |
+          if [ -d tests/cpu ]; then python -m pytest tests/cpu -q; else echo "tests/cpu 없음 (0-1 이전)"; fi
+
+  gpu-a5000:
+    if: github.event_name == 'workflow_dispatch' && inputs.gpu == 'a5000'
+    runs-on: [self-hosted, a5000]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: tests/gpu
+        run: |
+          if [ -d tests/gpu ]; then "${A5000_PYTHON:-python3}" -m pytest tests/gpu -q -m a5000; else echo "tests/gpu 없음"; fi
+
+  gpu-3090:
+    if: github.event_name == 'workflow_dispatch' && inputs.gpu == 'rtx3090'
+    runs-on: [self-hosted, rtx3090]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: tests/gpu
+        run: |
+          if [ -d tests/gpu ]; then "${RTX3090_PYTHON:-python3}" -m pytest tests/gpu -q -m rtx3090; else echo "tests/gpu 없음"; fi

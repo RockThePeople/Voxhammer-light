@@ -1,0 +1,6 @@
+[submodule "third_party/VoxHammer"]
+	path = third_party/VoxHammer
+	url = https://github.com/Nelipot-Lee/VoxHammer
+[submodule "third_party/ai-ar-v3"]
+	path = third_party/ai-ar-v3
+	url = https://github.com/RockThePeople/ai-ar-v3

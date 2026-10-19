@@ -1,0 +1,13 @@
+.env
+build/
+runs/
+*.safetensors
+*.ckpt
+*.pt
+*.glb
+*.exr
+__pycache__/
+*.pyc
+.venv/
+venv*/
+.pytest_cache/
