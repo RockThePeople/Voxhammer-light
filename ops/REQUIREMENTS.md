@@ -35,7 +35,21 @@ Oct 18, 2026 · @Alex
 
 ## 3. 목표 시스템 구성
 
-&#91;embedded content: 편집 1회 처리 흐름 · 3개 장비\]
+편집 1회 처리 흐름 (3개 장비):
+
+```
+Unity 클라이언트        RTX 3090 (인페인팅)                 A5000 (TRELLIS)
+편집 요청 ──요청──▶ 인페인팅 워커 ──이미지 3종──▶ 전처리 (rembg 1세션 · DINOv2, R8)
+ 라쏘 마스크 셀      INT4 FLUX.1 Fill                        ↓
+ 고정 시점 렌더 R10  마스크 밖 원본 합성                Stage 1 구조: inversion → denoising (캐시 축소·GPU 상주, R5 R12)
+                     상주 프로세스 R9                        ↓
+                                                        Stage 2 SLat: inversion → denoising (캐시 축소·매칭 1회, R6 R7 R12)
+                                                             ↓
+                                                        mesh 디코딩 → .cbin (GLB 없음, slat_tgt 저장, R2 R4)
+                                                             ↓
+청크 교체 ◀──패치── 검증 · 판본 저장 ◀──청크── 부기 · 패치 구성 (바뀐 청크만, 나머지 승계, R11)
+ in-place R11        PatchPackage 전달
+```
 
 3090은 인페인팅만, A5000은 전처리부터 `.cbin` 패치 구성까지 맡습니다. 두 워커 모두 모델을 상주시켜 편집마다 다시 로드하지 않고, A5000은 다음 편집을 위해 `slat_tgt`를 저장합니다. 상자 안의 R 번호는 4장 요구사항입니다.
 
@@ -128,6 +142,8 @@ VoxHammer 포크는 고치지 않고 정답 비교용으로만 둡니다. 편집
 - **검증 스크립트.** 고객사 스크립트 3개(`v_stage1_cache.py`, `v_stage2_misc.py`, `v_cbin_direct.py`)를 A5000에서 실행하고, 실제 규모(24블록, 1,024채널, 4,096토큰)로도 한 번 돌린다.
 - **기준선.** 6장 구간 계측 기준선을 제출하고, 이를 근거로 순서표의 효과 점수를 다시 매긴다. 현재 편집 서비스가 모델을 이미 상주시키는지(4번 R8a 효과 0 여부)도 확인한다.
 - **단독 검증.** conformance 53/53, 서버 테스트 전부 통과(현재 360개), 포크 실행 결과가 기존 실측(W41 자산)과 같은 자릿수인지.
+
+* **평가 시나리오 준비.** 6장 「평가 자산과 편집 시나리오」의 트랙 A 자산 생성·마스크 초안·트랙 B 선정안을 0번·0-1번과 병행해 제출한다. 0번 기준선은 moto-b로 먼저 진행해도 되며, 1번 E2a 시작 전에 시나리오 동결·승인을 끝낸다.
 
 #### 0-1. 모듈 이식
 
@@ -311,14 +327,63 @@ VoxHammer 포크는 고치지 않고 정답 비교용으로만 둡니다. 편집
 
 ### 품질 지표 (E1–E4, R4 육안 비교)
 
-- 보존: 고정 영역 채점(빈 칸 포함) 보존 IoU와 사라진 셀 수 (기존 `w42_region_eval` 기준)
-- 편집: VoxHammer 논문 Table 1과 같은 CLIP-I / DINO-I
-- 육안: 같은 시점·조명의 비교 렌더
-- 마스크가 점유 셀로만 이루어진 경우의 "마스크 안 신규 = 0" 같은 정의상 성립하는 지표는 쓰지 않는다
+- **보존(복셀).** `w42_region_eval`은 전달할 수 없으므로 아래 정의로 수행사가 구현한다. R\_keep = 64³ 격자 전체에서 (편집 마스크 ⊕ halo 2)를 뺀 셀(빈 칸 포함). R\_keep 안에서 부모 대비 점유 IoU, 사라진 셀 수, 새로 생긴 셀 수를 보고한다. 마스크 안의 새 셀·사라진 셀 수는 편집량으로 함께 적는다. 입력은 coords뿐이다.
+- **보존·정합(렌더).** Edit3D-Bench 평가 코드(`third_party/VoxHammer/Edit3D-Bench/eval_main.py`)의 PSNR·SSIM·LPIPS(마스크 밖), DINO-I, CLIP-T, Chamfer를 쓴다. FID·FVD는 표본 수가 적어 제외한다.
+- **육안.** 편집 시점과 3/4 시점의 같은 조명 비교 렌더.
+- 마스크가 점유 셀로만 이루어진 경우의 "마스크 안 신규 = 0" 같은 정의상 성립하는 지표는 쓰지 않는다.
+- **결과 변경 항목의 판정.** 기준 설정 3회 실행의 실행 간 편차를 허용 범위로 삼는다. 비교 설정의 평균이 모든 보존 지표와 DINO-I·CLIP-T에서 기준 평균보다 허용 범위 이상 나빠지지 않으면 통과 후보이고, 고객사가 육안 비교 후 확정한다.
 
-### 대상 자산
+### 평가 자산과 편집 시나리오
 
-t1s-snowman, t2s-moto(기존 W41·W42 자산) 2종 이상으로, 마스크 크기가 다른 편집을 각 2건 이상 실행합니다. 시간은 3회 실행 평균±표준편차로 적습니다.
+평가는 두 트랙으로 합니다. 트랙 A는 우리 생성 경로로 만든 자산으로 SLat 재사용·연쇄 편집 경로를, 트랙 B는 Edit3D-Bench 공개 표본(사람이 주석한 편집 영역)으로 VoxHammer 논문과 같은 조건을 봅니다. moto-b는 SLat feats가 없어 0번 기준선(원저자 경로 시간 측정)에만 씁니다. t1s-snowman과 W41·W42 수치는 재현할 수 없으므로 비교 기준으로 쓰지 않습니다.
+
+#### 트랙 A 자산 생성 포맷
+
+| 항목 | 값 |
+| --- | --- |
+| t2i | Z-Image-Turbo, 1024², 9 스텝(8 NFE), guidance 0, 시드 고정 (기존 3090 설정) |
+| 프롬프트 템플릿 | `{subject}, full body, 3/4 view, product photography, studio lighting, plain white background, centered, entire subject fully visible with margin, no text, no watermark` |
+| 배경 제거 | BiRefNet (기존 생성 경로) |
+| 3D 생성 | TRELLIS-image-large v1, 기본 샘플러 설정, 시드 고정. VoxHammer와 같은 SLat 공간이어야 하므로 TRELLIS.2는 쓰지 않는다 |
+| 저장 | `input.png`, 생성 파라미터 JSON, `slat.safetensors`(denormalized), mesh `.cbin`, 조건 렌더용 GLB |
+| 동결 | TRELLIS 생성은 같은 시드에서도 비결정적이다. 한 번 만든 산출물을 동결해 모든 비교에 쓴다 |
+| 편집 시점 | `render_rgb_and_mask.py`의 5개 시점 중 편집 부위가 가려지지 않는 시점 1개를 시나리오별로 지정해 기록 |
+
+#### 트랙 A 시나리오 (6건)
+
+| ID | 자산 subject | 편집 부위(마스크) | 유형 | 인페인팅 프롬프트 | 마스크 규모 |
+| --- | --- | --- | --- | --- | --- |
+| A-M1 | a man riding a black motorcycle | 라이더 머리 | 교체 | a red and gold Iron Man helmet as the rider's head | 소 |
+| A-M2 | (A-M1과 같은 자산) | 뒷바퀴 전체 | 형태 변경 | a thick chunky knobby off-road rear tire | 중 |
+| A-S1 | a snowman with a carrot nose, stick arms and a red scarf | 머리 윗부분 + 그 위 빈 공간 | 추가 | a tall black top hat on the snowman's head | 중(빈 공간 위주) |
+| A-S2 | (A-S1과 같은 자산) | 당근 코 | 교체 | a small round red ball nose | 소 |
+| A-C1 | a wooden armchair with armrests | 등받이 | 교체 | a tall backrest with vertical wooden slats | 대 |
+| A-C2 | (A-C1과 같은 자산) | 양쪽 팔걸이 | 제거 | the chair without armrests, plain seat sides | 중 |
+
+구조가 다른 자산 3종(여러 부품의 탈것·둥근 단일 형태·얇은 부재가 많은 가구)과, 편집 유형 4종(교체·형태 변경·추가·제거), 마스크 규모 3종을 모두 포함하도록 골랐습니다.
+
+#### 마스크 작성 규칙
+
+- 동결된 자산의 SLat 격자(64³) 좌표로 만든다. 형식은 기존 `handoff/lasso/*.mask.json`과 같다(`mode: voxels`, `grid_source: slat_coords`, `halo_margin_voxels: 2`).
+- 대상 부위의 점유 셀을 감싸는 상자에 여유 2셀을 더해 시작한다. 추가 유형(A-S1)은 새 부위가 들어갈 빈 공간을 상자에 포함한다.
+- 수행사가 초안을 만들어 편집 시점과 3/4 시점에 마스크를 겹친 렌더를 제출하고, 고객사 승인 후 동결한다.
+
+#### 조건 이미지 규칙
+
+- 편집 시점 렌더 → FLUX Fill(위 표의 프롬프트, 시드 고정)로 `2d_render`·`2d_mask`·`2d_edit`를 한 번 만들어 동결한다. 생성은 기존 bf16 FLUX(CPU offload)로 한다.
+- TRELLIS 쪽 항목(E2a 등)은 동결된 조건 이미지를 그대로 써서, 바뀌는 것이 해당 항목뿐이게 한다. 인페인팅을 바꾸는 R9·E4는 새 조건 이미지를 만들어 따로 평가한다.
+
+#### 트랙 B: Edit3D-Bench 표본
+
+- Hugging Face `huanngzh/Edit3D-Bench`(MIT)에서 8건을 고른다. 편집 영역(`3d_edit_region.glb`) 크기 기준 소·중·대가 고르고 GSO와 PartObjaverse-Tiny가 섞이도록 수행사가 선정안을 제출하고 고객사가 승인한다.
+- 원본이 GLB이므로 SLat은 원저자 경로(150뷰 렌더 → 인코딩)로 한 번 만들어 동결한다. 마스크는 `3d_edit_region.glb`를 복셀화해 쓰고, 프롬프트는 데이터셋의 것을 쓴다.
+- 조건 이미지 규칙은 트랙 A와 같다.
+
+#### 실행과 동결
+
+- 각 시나리오를 설정마다 3회 실행해 평균±표준편차로 적는다(트랙 A 6건 + 트랙 B 8건 = 14건). 1번 E2a는 25·15·12 스텝 각각에 대해 실행한다.
+- 시나리오 정의(자산 파일 해시, 마스크, 조건 이미지, 프롬프트, 시드, 편집 시점)는 저장소 `scenarios/`에 커밋하고, 이후 모든 항목이 같은 정의를 쓴다.
+- 시나리오 준비는 0번 착수·0-1번 이식과 병행하되, 1번 E2a를 시작하기 전에 동결·승인을 끝낸다.
 
 ## 7. 산출물과 보고 형식
 
