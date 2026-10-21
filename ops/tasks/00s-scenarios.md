@@ -58,13 +58,14 @@
 - 동결 자산의 SLat 격자(64³) 좌표로 만든다. 형식은 `handoff/lasso/*.mask.json` 과 같게: `mode: voxels`, `grid_source: slat_coords`, **`halo_margin_voxels: 2`**.
 - 트랙 A: 대상 부위 점유 셀을 감싸는 상자 + 여유 2셀에서 시작. A-S1 은 모자가 들어갈 빈 공간을 상자에 포함.
 - 트랙 B: `3d_edit_region.glb` 복셀화 결과.
-- 지문은 `deltacontract.mask_fingerprint` 로 계산해 기록.
+- 지문은 `deltacontract.mask_fingerprint(np.asarray(voxels))` 로 계산해 기록. 마스크 검증은 이 셀 지문으로 하고 파일 바이트 해시로 하지 않는다.
 - **초안 렌더:** 시나리오마다 편집 시점과 3/4 시점에 마스크를 겹친 렌더 2장 → `scenarios/drafts/<ID>_{edit,34}.png` (작은 해상도). 고객사 승인 후 동결.
 - 편집 시점: `render_rgb_and_mask.py` 의 5개 시점 중 편집 부위가 가려지지 않는 1개를 시나리오별로 지정해 기록.
 
 ## S-6 조건 이미지 (a5000, 마스크 승인 후)
 
 - 편집 시점 렌더 → 기존 bf16 FLUX(CPU offload, 현행 경로) → `2d_render`·`2d_mask`·`2d_edit` 를 시나리오당 한 번, 시드 고정으로 만들어 동결. 트랙 B 프롬프트는 데이터셋 것.
+- "현행 경로" = A5000 의 `inpaint_offload.py`(00a A6, 1024², 50스텝, guidance 30). 3090 의 Nunchaku·미러 bf16 은 쓰지 않는다. 조건 렌더 전 `OPENCV_IO_ENABLE_OPENEXR=1`.
 - TRELLIS 쪽 항목(E2a 등)은 이 동결 이미지를 그대로 쓴다. R9·E4 는 새 조건 이미지를 만들어 따로 평가한다.
 
 ## S-7 보존 지표 R_keep (a5000, `eval/`)

@@ -58,6 +58,7 @@ VoxHammer(f33cd96 + 기준 패치) 기반 3D 편집 1회의 벽시계 시간을 
   - D51 정수 부호화 보존 판정, Stage 2 inversion 은 보존 좌표로 자른 SLat
   - 공동 bbox crop, 이미지 패치 마스크 CLS·register 5토큰 처리
   - W34 SLat 재사용 입력과 `slat_space=denormalized` 검사
+  - attention 백엔드: 원본 `edit_pipeline.py:2` 가 import 시 `ATTN_BACKEND=sdpa` 로 강제한다. 이식본도 같은 백엔드로 돈다(00a A5000)
 
 ## 동등성 허용치 (요구사항서 6장)
 
