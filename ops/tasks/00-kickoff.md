@@ -101,29 +101,37 @@ R10a 기준 렌더러는 포크 `utils/render_rgb_and_mask.py` 를 **수정 없�
 
 ---
 
-## B. rtx3090 세션
+## B. rtx3090 세션 (00a 3090 보고 PR #1 반영, 2026-10-21)
 
-### B-1 환경 고정
-- `git clone --recurse-submodules` → `check_pins.py` OK.
-- 현재 3090 에 상주하는 프로세스와 VRAM 을 기록(Z-Image-Turbo, BiRefNet, ai-ar-v3 오케스트레이터 등). `nvidia-smi` 와 각 프로세스의 환경(conda env 이름, torch·CUDA 버전).
-- `pip freeze` 를 `env/rtx3090-<env이름>.txt` 로 커밋(경로·호스트 제거).
+00a 에서 확인된 사실(실측): Z-Image·BiRefNet·FLUX 는 상주하지 않고 호출마다 subprocess 로 뜬다. ai-ar-v3 오케스트레이터는 꺼져 있고, 로컬 체크아웃의 `server/`·`contract/` 는 19ed91f 와 같다. Nunchaku INT4 FLUX Fill(`flux-fill` env, nunchaku 1.2.1, torch 2.9.1+cu128)과 bf16 FLUX.1-Fill-dev(비게이트 미러 `camenduru/FLUX.1-Fill-dev-ungated`)가 이미 있다. 3090→A5000 HTTP 는 연결 거부.
 
-### B-2 현행 코드 보관
-- 3090 에서 편집 경로에 관여하는 코드(오케스트레이터가 A5000 으로 편집을 넘기는 부분, 조건 이미지 전달 부분)가 ai-ar-v3 main 과 다르면 차이를 `legacy/rtx3090/` 에 보관하고 `README.md` 에 기록. 같으면 "ai-ar-v3 19ed91f 와 동일" 이라고만 적는다.
-- 현재 3090 에 인페인팅 코드가 있는지 확인(없으면 없다고 적는다).
+### B-0 기준 사본
+- 00a 에서 손으로 만든 `build/reference` 는 스탬프가 없어 새 `tools/setup_reference.sh` 가 거부한다(삭제하지 않음). 새 경로로 만든다: `REFERENCE_DIR=build/reference-v2 bash tools/setup_reference.sh`. 이후 이 세션은 이 경로를 쓴다.
 
-### B-3 VRAM 여유 측정 (R9 준비, 설치하지 않음)
-- Z-Image-Turbo 상주 상태의 VRAM 사용량, 유휴 VRAM, 피크(생성 1회 중).
-- Nunchaku INT4 FLUX Fill 은 **설치하지 않는다**(5번 항목). 공개 문서 기준 요구 torch·CUDA 버전과 예상 VRAM 을 `추론` 으로 적는다.
+### B-1·B-2 완료 (00a)
+- 환경 기록과 pip freeze 는 00a 에서 끝났다. 편집 경로 코드는 "ai-ar-v3 19ed91f 와 동일"(`server/`·`contract/` 차이 없음)이므로 `legacy/rtx3090/` 보관은 하지 않는다.
+- 3090 인페인팅 도구(`flux_fill.py`, 벤치 스크립트, README)는 git 밖에 있다. **수정 없이** `legacy/rtx3090/flux_fill/` 에 복사하고(가중치 제외, 경로·키는 자리표시자로), README 의 기존 측정값은 `미검증` 으로 표시한다. 5번 R9 의 출발점으로 쓴다.
 
-### B-4 장비 간 전송 측정 (구간 2 의 전송 부분)
-- 1024² PNG 3장(약 `2d_render`·`2d_mask`·`2d_edit` 크기) 을 기존 multipart 규약 형태로 A5000 ↔ 3090 왕복 전송한 시간(10회 평균). 호스트·포트는 `.env` 에서만 읽는다.
+### B-3 1회 호출 비용 측정 (정의 변경: "상주 VRAM" → "호출 1회 비용")
+Z-Image·BiRefNet 은 상주하지 않으므로 호출 1회의 비용을 잰다. 다른 GPU 작업이 없을 때 실행한다.
+- Z-Image-Turbo(`zimage_gen.py`, 1024², 9스텝, guidance 0, seed 42) 와 BiRefNet(`birefnet_seg.py`) 각 3회: subprocess 기동~종료 벽시계 시간, 그 안의 모델 적재 시간과 생성 시간, 피크 VRAM(`torch.cuda.max_memory_allocated` 를 워커 밖 래퍼에서 읽을 수 없으면 `nvidia-smi --query-gpu=memory.used` 를 0.1 s 간격으로 샘플링한 최대값).
+- 워커 스크립트는 수정하지 않는다. 시간·VRAM 은 감싸는 래퍼(`reference/rtx3090/`)에서 잰다.
+- 결과는 5번 R9 의 "Z-Image 와 INT4 FLUX 동시 상주 가능 여부" 판단 근거가 된다.
+
+### B-4 Nunchaku INT4 FLUX Fill 기존 env (측정만, 변경 금지)
+- `flux-fill` env 와 가중치는 **수정·업데이트하지 않는다**(5번 R9 에서 다룬다). 0번에서는 사용하지 않는다.
+- 기존 README 측정값(INT4 1024²·30스텝 15.6 s, bf16+offload 59.5 s)은 `미검증` 으로만 인용한다. 0번에서 재실행하지 않는다.
+- bf16 가중치가 원본 `black-forest-labs/FLUX.1-Fill-dev` 가 아니라 비게이트 미러다. 미러 각 파일의 sha256 을 기록한다(원본 대조는 chief 가 고객사 확인 후 지시).
+
+### B-5 장비 간 전송 측정 (보류)
+- 3090→A5000 편집 서비스 포트가 연결 거부 상태다. A5000 00a 보고(A4·A12)로 서비스 주소·기동 여부를 확인한 뒤 chief 가 다시 지시한다. 그 전에는 하지 않는다.
+- 오케스트레이터 재기동도 그때 함께 정한다. 0번에서 임의로 기동하지 않는다.
 
 ---
 
-## 공통: self-hosted 러너
+## 공통: self-hosted 러너 (보류, 2026-10-21)
 
-각 워크스테이션에 GitHub Actions self-hosted 러너를 등록한다(라벨 `a5000`, `rtx3090`). 등록 토큰은 저장소 관리자가 발급한다. 러너는 사용자 서비스로 띄우고, 사용하는 파이썬 경로는 `.env` 의 `A5000_PYTHON` / `RTX3090_PYTHON` 으로 준다. 등록이 막히면 보고서에 적고 나머지를 진행한다.
+등록에 sudo 또는 `loginctl enable-linger` 가 필요해 사용자 조치가 있어야 한다(00a 3090 보고). 러너는 편의 기능이므로 0번을 막지 않는다. 등록 전까지 GPU 테스트는 각 세션이 직접 실행하고, 결과를 보고서에 적는다.
 
 ## 완료 조건
 
@@ -137,5 +145,5 @@ R10a 기준 렌더러는 포크 `utils/render_rgb_and_mask.py` 를 **수정 없�
 - [ ] 조건 렌더 3회 실행 간 픽셀 차이 표(A-5b)
 - [ ] 고객사 스크립트: 원본 실행, GPU fp16 사본(diff 첨부), 실제 규모 1회(A-7)
 - [ ] 효과 재산정 표
-- [ ] 3090: 상주 VRAM, 전송 시간, 환경 기록
+- [ ] 3090: B-0 기준 사본, legacy 복사, B-3 호출 1회 비용, B-4 미러 sha256 (B-5 전송은 보류)
 - [ ] 보고서 2개, PR 2개 (본문에 보고서 경로)
