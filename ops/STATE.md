@@ -3,8 +3,8 @@
 갱신: 2026-10-21
 
 ## 현재 항목
-- **00 착수** — 지시서 [tasks/00-kickoff.md](tasks/00-kickoff.md). 담당 a5000(A-1~A-9, A-5b), rtx3090(B-1~B-4).
-- **00s 시나리오 준비** (병행) — 지시서 [tasks/00s-scenarios.md](tasks/00s-scenarios.md). 담당 rtx3090(S-1), a5000(S-2~S-8).
+- **00a 환경 점검 (읽기 전용)** — 지시서 [tasks/00a-env-check.md](tasks/00a-env-check.md). 담당 a5000(A절), rtx3090(B절). 산출 PR 2개. chief 검토·승인 후 다음으로.
+- 대기: **00 착수** [tasks/00-kickoff.md](tasks/00-kickoff.md), **00s 시나리오 준비** [tasks/00s-scenarios.md](tasks/00s-scenarios.md) — 00a 승인 후 지시서 갱신을 pull 해서 시작.
 
 ## 승인 이력
 | 순서 | ID | 태그 | 승인일 | 비고 |
@@ -34,8 +34,9 @@
 - moto-b 는 SLat feats 가 없어 0번 시간 기준선(원저자 경로) 전용. W41·W42·snowman 수치는 비교 기준으로 쓰지 않음 → 0번 "기존 실측과 같은 자릿수" 는 116–129 s 와의 자릿수 대조(참고)로만.
 
 ## 현재 진행 중
-- 00 착수 (a5000, rtx3090)
-- 00s 시나리오 준비 (rtx3090 S-1, a5000 S-2~S-8). 제출 ① 트랙 A 자산·마스크 초안·트랙 B 선정안 → 승인 → ② 조건 이미지 동결 → 1번 E2a 가능
+- 00a 환경 점검 (a5000, rtx3090)
+- (대기) 00 착수 (a5000, rtx3090)
+- (대기) 00s 시나리오 준비 (rtx3090 S-1, a5000 S-2~S-8). 제출 ① 트랙 A 자산·마스크 초안·트랙 B 선정안 → 승인 → ② 조건 이미지 동결 → 1번 E2a 가능
 
 ## 미해결 (고객사)
 - 없음 (2026-10-21 기준). 착수 전 남은 일: main push(bundle), self-hosted 러너 등록.
