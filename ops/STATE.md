@@ -3,13 +3,17 @@
 갱신: 2026-10-21
 
 ## 현재 항목
-- **00a 환경 점검 (읽기 전용)** — 지시서 [tasks/00a-env-check.md](tasks/00a-env-check.md). 담당 a5000(A절), rtx3090(B절). 산출 PR 2개. chief 검토·승인 후 다음으로.
-- 대기: **00 착수** [tasks/00-kickoff.md](tasks/00-kickoff.md), **00s 시나리오 준비** [tasks/00s-scenarios.md](tasks/00s-scenarios.md) — 00a 승인 후 지시서 갱신을 pull 해서 시작.
+- **00 착수** [tasks/00-kickoff.md](tasks/00-kickoff.md) — a5000 A절(A-0부터), rtx3090 B절(B-0부터). 브랜치 `item/00-kickoff-<장비>`.
+- **00s 시나리오 준비** (병행) [tasks/00s-scenarios.md](tasks/00s-scenarios.md) — rtx3090 S-1, a5000 S-2~S-8. 브랜치 `item/00s-scenarios-<장비>`.
+- 고객사 확인 요청(2026-10-21 발송, A1–A7) 답변 대기. 답을 기다리지 않고 진행해도 되는 범위와 멈출 지점:
+  - a5000: 0번 A절 전부 진행. 단 A-6 의 moto-b feats SLat(W34 보조 측정)은 쓰지 않는다(A2). 00s 는 S-3(Edit3D-Bench 확보·후보표)·S-7(R_keep, 이웃은 26-이웃 기본값을 인자로 바꿀 수 있게)부터. S-2 는 3090 S-1 이미지가 오면.
+  - rtx3090: 0번 B절 전부, 00s S-1. **3090 GPU 를 쓰는 측정(B-3)과 생성(S-1)은 동시에 돌리지 않는다.**
+  - 두 장비 모두: 새 포트를 열거나 서비스를 띄우지 않는다(A4·A5 답 대기). R9 관련 작업은 하지 않는다(A1 답 대기).
 
 ## 승인 이력
 | 순서 | ID | 태그 | 승인일 | 비고 |
 |---|---|---|---|---|
-| – | – | – | – | 아직 없음 |
+| 00a | 환경 점검 | `approved/00a` | 2026-10-21 | PR #1(3090), #2(A5000). 수행사 내부 단계 |
 
 ## 고정값
 - VoxHammer f33cd965388faf4bd89252068cac5a0b8030e7de
