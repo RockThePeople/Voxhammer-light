@@ -81,7 +81,7 @@ VoxHammer(f33cd96 + 기준 패치) 기반 3D 편집 1회의 벽시계 시간을 
 
 - 항목 하나 = 브랜치 하나: `item/NN-ID-<장비>` (예: `item/00-kickoff-a5000`). 재사용하지 않는다.
 - PR 하나 = 항목 하나. PR 본문에 보고서 경로.
-- 고객사 승인 후 main 병합, 태그 `approved/NN-ID`.
+- 고객사 승인 후 main 병합. **승인 기준은 `ops/STATE.md` 승인 이력의 병합 커밋 해시**다(chief 세션은 태그를 만들 수 없다). 태그 `approved/NN-ID` 는 chief 가 요청할 때 작업 세션이 그 해시에 붙여 push 한다.
 
 ## 보안
 
