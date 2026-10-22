@@ -34,6 +34,14 @@
 | `tests/gpu/run_stage_equivalence.py` | 실제 모델 단계 동등성·출발 잡음·RNG 확인 |
 | `tests/gpu/run_e2e_port.sh`, `tests/gpu/compare_port.py` | 종단 동등성(P-4) |
 
+## 2a. attention 계산 경로 (코드확인, CLAUDE.md main `1fb17a2` 정정의 근거)
+
+- 편집 경로의 Stage 1·2 attention 은 포크가 `MethodType` 으로 바꿔 끼운 `ss_attn_forward`(`edit_pipeline.py:174–212`, 호출 208행)·`slat_attn_forward`(`:256–327`, 호출 322행)가 **`F.scaled_dot_product_attention` 을 직접** 부른다. Stage 2 self-attention 도 sparse 텐서의 feats 를 (1, heads, N, dim) 로 펴서 전 토큰 SDPA 를 한다(298–300·322행).
+- 따라서 TRELLIS 의 sparse attention 백엔드(`trellis/modules/sparse/__init__.py:16-25` 의 `ATTN`, 이 env 에서 flash_attn)는 편집 경로(Stage 1·2 flow)에서 쓰이지 않는다. 쓰이는 곳은 교체되지 않은 모듈 — SLat 디코더(swin attention) 등이다.
+- `edit_pipeline.py:2` 의 `ATTN_BACKEND=sdpa` 는 dense attention 모듈(`trellis/modules/attention`) 의 `BACKEND` 를 정할 뿐이고, 편집 경로의 dense attention 도 위 직접 호출을 쓴다.
+- 00 보고의 로그 `[SPARSE] Backend: spconv, Attention: flash_attn` 은 sparse 모듈 import 시 출력이며 편집 경로의 attention 계산을 뜻하지 않는다. 0번 보고와 이전 CLAUDE.md 의 "Stage 2 는 flash_attn" 서술은 이 점에서 틀렸다.
+- 이식본(`editcore/attention.py`)도 같은 직접 호출을 쓴다. SDPA 내부 커널(flash/mem-efficient/math)은 torch 가 dtype·모양으로 고르므로 같은 env·같은 입력이면 같은 커널이 선택된다(추론, 종단 비교로 확인).
+
 ## 3. 보존 동작 체크리스트 (CLAUDE.md 「반드시 보존할 동작」)
 
 | 보존 동작 | 이식 위치 | 지키는 테스트 |
@@ -49,7 +57,7 @@
 | 공동 bbox crop | `preprocess.preprocess_images` | CPU `test_preprocess_bit_equal` |
 | 이미지 패치 마스크 CLS·register 5토큰 처리 | `masks.ss_masks`(cond_extra_tokens=5) | CPU `test_masks_bit_equal`, `test_constants_derivation` |
 | W34 SLat 재사용 입력과 `slat_space=denormalized` 검사 | `pipeline.edit`(load_slat) | GPU 종단(W34 입력) |
-| attention 백엔드 dense=sdpa, sparse=flash_attn | `models.py` 환경변수 | GPU 단계 동등성 로그 |
+| attention 계산: Stage 1·2 모두 `F.scaled_dot_product_attention` 직접 호출(포크 `ss_attn_forward`:208, `slat_attn_forward`:322) | `attention.SSAttention`/`SlatAttention` 이 같은 호출을 그대로 쓴다. `models.py` 는 포크와 같이 `ATTN_BACKEND=sdpa` 설정 | CPU `test_stage1_sampler_bit_equal`, GPU 단계 동등성 |
 | 상수 4096·16·64·37·14·1374 모델 설정에서 유도 | `models.derive_constants` | CPU `test_constants_derivation`(설정값), GPU(실제 파이프라인) |
 | 출발 잡음 = 요청 seed (정오표 E7) | `pipeline.stage2_denoise`(CPU Generator) | GPU 단계 동등성(`start_noise_bit_equal`, `rng_untouched_before_512`) |
 
