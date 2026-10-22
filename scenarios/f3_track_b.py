@@ -69,6 +69,7 @@ def encode():
         src = BENCH / r["dataset"] / r["object"] / "source_model" / "model.glb"
         rd = RUNS / "f3" / bid / "render150"
         T = {}
+        import gc; gc.collect(); torch.cuda.empty_cache()  # Cycles(GPU) 렌더 전에 torch 캐시 반환 — B3 에서 OOM 실측
         torch.cuda.synchronize(); t = time.perf_counter()
         inf.run_3d_rendering(str(src), str(rd))
         T["render_150views"] = time.perf_counter() - t; t = time.perf_counter()
