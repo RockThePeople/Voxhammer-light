@@ -1,0 +1,447 @@
+{
+ "item": "00s S-2/S-5 (a5000)",
+ "created": "2026-10-22",
+ "note": "자산·마스크 초안. 조건 이미지(S-6)는 마스크 승인 후. 파일은 ASSETS_DIR(git 제외), 해시만.",
+ "assets": {
+  "moto": {
+   "subject": "a man riding a black motorcycle",
+   "input_seed": 42,
+   "input_sha256": {
+    "image_rgb.png": "ba83d6d489ea414ac5c0d77c34257e8240e69297f610478c895579b37ade8119",
+    "input.png": "1909de04ad14ec999d8541352a700198dc5c1d960b717b549664b1c507c8c64f"
+   },
+   "input_note": "",
+   "gen": {
+    "model": "microsoft/TRELLIS-image-large (v1)",
+    "seed": 42,
+    "sampler": {
+     "sparse_structure": {
+      "steps": 25,
+      "cfg_strength": 5.0,
+      "cfg_interval": [
+       0.5,
+       1.0
+      ],
+      "rescale_t": 3.0
+     },
+     "slat": {
+      "steps": 25,
+      "cfg_strength": 5.0,
+      "cfg_interval": [
+       0.5,
+       1.0
+      ],
+      "rescale_t": 3.0
+     }
+    },
+    "slat": {
+     "n": 11396,
+     "feats": [
+      11396,
+      8
+     ]
+    },
+    "mesh": {
+     "vertices": 214994,
+     "faces": 430084,
+     "chunks": 458,
+     "chunks_digest": "1029907290cf62b43bb25c9b12b8460b006c4beb736503fe350489e760d5b5fb"
+    },
+    "files_sha256": {
+     "slat.safetensors": "dc5f4394c4190464fb300474861af5a5ff0003cffee24c9087f526d94e5b779c",
+     "model_raw.glb": "de40b63a5f487113e28899e540997847b5114678813e3ab52c2f19a8f372de0a",
+     "model.glb": "ea993b04070bdcfe0860ef92909b4ad773bc22faeae0fb5114bca0bbd76e9aba"
+    },
+    "glb_normalize": {
+     "center_glb_frame": [
+      -0.000733301043510437,
+      -0.0005714148283004761,
+      0.00010475516319274902
+     ],
+     "scale": 0.9991873555501413,
+     "note": "model.glb = (model_raw.glb − center) × scale; to_glb 는 복셀 프레임을 Y-up 으로 돌린다(frames D9-b)"
+    }
+   }
+  },
+  "snowman": {
+   "subject": "a snowman with a carrot nose, stick arms and a red scarf",
+   "input_seed": 42,
+   "input_sha256": {
+    "image_rgb.png": "cb00015b6ed4521d9fd3bd330e5fb6fb38505ce0ba012c2266e578d1e7ca89f6",
+    "input.png": "18060f3b0950517a5a51c98df3406ce24087ad3facfcc48d7b3a1000a6dabd34"
+   },
+   "input_note": "",
+   "gen": {
+    "model": "microsoft/TRELLIS-image-large (v1)",
+    "seed": 42,
+    "sampler": {
+     "sparse_structure": {
+      "steps": 25,
+      "cfg_strength": 5.0,
+      "cfg_interval": [
+       0.5,
+       1.0
+      ],
+      "rescale_t": 3.0
+     },
+     "slat": {
+      "steps": 25,
+      "cfg_strength": 5.0,
+      "cfg_interval": [
+       0.5,
+       1.0
+      ],
+      "rescale_t": 3.0
+     }
+    },
+    "slat": {
+     "n": 10628,
+     "feats": [
+      10628,
+      8
+     ]
+    },
+    "mesh": {
+     "vertices": 312662,
+     "faces": 625372,
+     "chunks": 610,
+     "chunks_digest": "c269c34c08a25af2e2caf4ad645f81c0a5b3402eb3d2d73cb7f663744d2ce6dd"
+    },
+    "files_sha256": {
+     "slat.safetensors": "fcd3215e33339c249b55b86dcf244b6c01158a61e2c32e6800097dcccee9ddab",
+     "model_raw.glb": "f9cffc5c731fa44b6ac914d242f4a6e95f135b22633cef1d8a3c02c15906d079",
+     "model.glb": "e072dca0f94291d6ff2c910d4d0294f508071950049ddd16058f69e8c6e88369"
+    },
+    "glb_normalize": {
+     "center_glb_frame": [
+      -9.119510650634766e-05,
+      -0.0005220919847488403,
+      -0.0017960071563720703
+     ],
+     "scale": 1.0007873112754744,
+     "note": "model.glb = (model_raw.glb − center) × scale; to_glb 는 복셀 프레임을 Y-up 으로 돌린다(frames D9-b)"
+    }
+   }
+  },
+  "chair": {
+   "subject": "a wooden armchair with armrests",
+   "input_seed": 43,
+   "input_sha256": {
+    "image_rgb.png": "75b52e27d60fbe6a16f68cee1d273e46910f95bdd9d50fa53f969f24dbdef017",
+    "input.png": "c967a054b08e338c921afa39effb2e9ec24cfb893cf01588d64a7c61cdd018fe"
+   },
+   "input_note": "seed 42 등받이에 세로 살 3개 → A-C1(\"vertical wooden slats\") 효능이 안 보일 수 있어 chief 지시(2026-10-22)로 seed 43부터 순서대로 탐색. seed 43 등받이가 살 없는 판 → 첫 해당 시드로 채택. 44–47 은 만들지 않음.",
+   "gen": {
+    "model": "microsoft/TRELLIS-image-large (v1)",
+    "seed": 42,
+    "sampler": {
+     "sparse_structure": {
+      "steps": 25,
+      "cfg_strength": 5.0,
+      "cfg_interval": [
+       0.5,
+       1.0
+      ],
+      "rescale_t": 3.0
+     },
+     "slat": {
+      "steps": 25,
+      "cfg_strength": 5.0,
+      "cfg_interval": [
+       0.5,
+       1.0
+      ],
+      "rescale_t": 3.0
+     }
+    },
+    "slat": {
+     "n": 9292,
+     "feats": [
+      9292,
+      8
+     ]
+    },
+    "mesh": {
+     "vertices": 210120,
+     "faces": 420216,
+     "chunks": 467,
+     "chunks_digest": "267fa7d3fa5b7a20682cdd7480f795d5c041082d451b31314c5ca6606bf03672"
+    },
+    "files_sha256": {
+     "slat.safetensors": "e30ed5fd30f5b263a1f99a5eba233fd922f50408ab1eeb540ef92e5f95dfb56c",
+     "model_raw.glb": "65d8b5e34174b38c5519f5f931a519f1728acc9cb545c75e7cfc389a8113d8c4",
+     "model.glb": "67595c621826fee7d136141434954761907b92bf64a688f8976d8f43ee811983"
+    },
+    "glb_normalize": {
+     "center_glb_frame": [
+      -0.0005711913108825684,
+      -0.0002994537353515625,
+      0.0023377835750579834
+     ],
+     "scale": 0.9994150247846016,
+     "note": "model.glb = (model_raw.glb − center) × scale; to_glb 는 복셀 프레임을 Y-up 으로 돌린다(frames D9-b)"
+    }
+   }
+  }
+ },
+ "scenarios": {
+  "A-M1": {
+   "asset": "moto",
+   "type": "교체",
+   "inpaint_prompt": "a red and gold Iron Man helmet as the rider's head",
+   "scale_target": "소",
+   "mask": {
+    "file": "track_a/moto/masks/A-M1.mask.json",
+    "n_cells": 3808,
+    "fingerprint": "c8d28b2c68375b9617c0a7018e4feb95c95dee4347d66fb9aaa0c5f4471aedf9",
+    "boxes": [
+     [
+      [
+       23,
+       28,
+       47
+      ],
+      [
+       39,
+       43,
+       60
+      ]
+     ]
+    ],
+    "occupied_cells_in_mask": 806,
+    "occupied_ratio": 0.0707,
+    "halo_margin_voxels": 2,
+    "file_sha256": "c553797f6ed3ffde269737e8cec710826a7d96be25e2f703d476cadcf5ce9a89"
+   },
+   "edit_view": 3,
+   "view_34": 1,
+   "mask_px_per_view": [
+    27732,
+    34790,
+    27368,
+    35235,
+    28231
+   ],
+   "condition_images": null,
+   "condition_seed": 0,
+   "status": "draft (승인 전)"
+  },
+  "A-M2": {
+   "asset": "moto",
+   "type": "형태 변경",
+   "inpaint_prompt": "a thick chunky knobby off-road rear tire",
+   "scale_target": "중",
+   "mask": {
+    "file": "track_a/moto/masks/A-M2.mask.json",
+    "n_cells": 11664,
+    "fingerprint": "24b2cf6d3d3865410b1975f8774571a533a6c22d5ffa24a1f01ab26a04323cb1",
+    "boxes": [
+     [
+      [
+       23,
+       40,
+       3
+      ],
+      [
+       40,
+       63,
+       29
+      ]
+     ]
+    ],
+    "occupied_cells_in_mask": 2551,
+    "occupied_ratio": 0.2239,
+    "halo_margin_voxels": 2,
+    "file_sha256": "e1dc65479b22b563395cfe06d0438bba89df8f5920be6e1eebf97bca1a9934e6"
+   },
+   "edit_view": 0,
+   "view_34": 1,
+   "mask_px_per_view": [
+    68252,
+    43884,
+    8454,
+    41461,
+    67599
+   ],
+   "condition_images": null,
+   "condition_seed": 0,
+   "status": "draft (승인 전)"
+  },
+  "A-S1": {
+   "asset": "snowman",
+   "type": "추가",
+   "inpaint_prompt": "a tall black top hat on the snowman's head",
+   "scale_target": "중(빈 공간 위주)",
+   "mask": {
+    "file": "track_a/snowman/masks/A-S1.mask.json",
+    "n_cells": 10080,
+    "fingerprint": "fd61aa8cef411c1bdddd672123dff09f462e22d9e555e454fba42e4dc3190378",
+    "boxes": [
+     [
+      [
+       18,
+       18,
+       52
+      ],
+      [
+       45,
+       47,
+       63
+      ]
+     ]
+    ],
+    "occupied_cells_in_mask": 1375,
+    "occupied_ratio": 0.1294,
+    "halo_margin_voxels": 2,
+    "file_sha256": "3434e4a3af991a046014fac78db0672765a841b0a197fee384618076d02d0f23"
+   },
+   "edit_view": 1,
+   "view_34": 3,
+   "mask_px_per_view": [
+    51384,
+    59162,
+    48012,
+    59153,
+    51377
+   ],
+   "condition_images": null,
+   "condition_seed": 0,
+   "status": "draft (승인 전)"
+  },
+  "A-S2": {
+   "asset": "snowman",
+   "type": "교체",
+   "inpaint_prompt": "a small round red ball nose",
+   "scale_target": "소",
+   "mask": {
+    "file": "track_a/snowman/masks/A-S2.mask.json",
+    "n_cells": 512,
+    "fingerprint": "1996548c340e662f4955a094efdbc0ef4e9fe1ebba355b30e90c3e274f39afe3",
+    "boxes": [
+     [
+      [
+       28,
+       42,
+       49
+      ],
+      [
+       35,
+       49,
+       56
+      ]
+     ]
+    ],
+    "occupied_cells_in_mask": 111,
+    "occupied_ratio": 0.0104,
+    "halo_margin_voxels": 2,
+    "file_sha256": "e42a6e10d1ce86c86c2c5d2fc985d0bd0d5f582418d864ce2a2b83ff0346ff59"
+   },
+   "edit_view": 4,
+   "view_34": 1,
+   "mask_px_per_view": [
+    7196,
+    2688,
+    0,
+    2702,
+    7203
+   ],
+   "condition_images": null,
+   "condition_seed": 0,
+   "status": "draft (승인 전)"
+  },
+  "A-C1": {
+   "asset": "chair",
+   "type": "교체",
+   "inpaint_prompt": "a tall backrest with vertical wooden slats",
+   "scale_target": "대",
+   "mask": {
+    "file": "track_a/chair/masks/A-C1.mask.json",
+    "n_cells": 14000,
+    "fingerprint": "5721aa432ddfb950ade898ed3b6c4509d8653907527ea8b1784946c79d482f3f",
+    "boxes": [
+     [
+      [
+       7,
+       42,
+       44
+      ],
+      [
+       56,
+       55,
+       63
+      ]
+     ]
+    ],
+    "occupied_cells_in_mask": 1509,
+    "occupied_ratio": 0.1624,
+    "halo_margin_voxels": 2,
+    "file_sha256": "386d3d272ea6fffc2108dc9c4ead218c8ee3a7e5231bf64044b8d4145dd22332"
+   },
+   "edit_view": 2,
+   "view_34": 1,
+   "mask_px_per_view": [
+    58488,
+    83308,
+    87091,
+    83235,
+    58399
+   ],
+   "condition_images": null,
+   "condition_seed": 0,
+   "status": "draft (승인 전)"
+  },
+  "A-C2": {
+   "asset": "chair",
+   "type": "제거",
+   "inpaint_prompt": "the chair without armrests, plain seat sides",
+   "scale_target": "중",
+   "mask": {
+    "file": "track_a/chair/masks/A-C2.mask.json",
+    "n_cells": 18648,
+    "fingerprint": "9e6095bd3963c26edcebc624691a278157a7b10a20b6fb312fa5b8497d8f8344",
+    "boxes": [
+     [
+      [
+       6,
+       9,
+       34
+      ],
+      [
+       17,
+       45,
+       54
+      ]
+     ],
+     [
+      [
+       46,
+       9,
+       34
+      ],
+      [
+       57,
+       45,
+       54
+      ]
+     ]
+    ],
+    "occupied_cells_in_mask": 1752,
+    "occupied_ratio": 0.1885,
+    "halo_margin_voxels": 2,
+    "file_sha256": "fca9da2470221d1d3e77e2d6db89dcd9f00e99675caf752e81738ed719dd019e"
+   },
+   "edit_view": 1,
+   "view_34": 3,
+   "mask_px_per_view": [
+    140232,
+    164586,
+    107001,
+    164443,
+    140123
+   ],
+   "condition_images": null,
+   "condition_seed": 0,
+   "status": "draft (승인 전)"
+  }
+ }
+}
