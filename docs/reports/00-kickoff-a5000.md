@@ -129,11 +129,29 @@ rider-head, 2회(eq1·eq2), 실측:
 
 - 구간 4–7 합 79 s 는 예상(116–129 s 자릿수) 안이지만 아래쪽이다. 원인은 가르지 않았다.
 - Stage 2 feats 회차 간 차이가 예상(≈4.7e-2)보다 두 자릿수 크다 → 5절의 원인 분리.
-- **EXR 읽기:** `OPENCV_IO_ENABLE_OPENEXR=1` 을 설정해도 조건 렌더 후처리가 실패했다(`load_depth` 에서 `TypeError: 'NoneType' object is not subscriptable`). 현행 env 의 opencv 5.0.0 이 **OpenEXR 없이 빌드**돼 있다(`cv2.getBuildInformation()`: `OpenEXR: NO`) — 환경변수로는 해결되지 않는다. 설치 없이 우회: 래퍼에서 포크 모듈이 보는 `cv2` 를 프록시로 바꿔 `.exr` 만 bpy(`bpy.data.images.load`)로 읽고 cv2 와 같은 모양(위→아래 행, BGRA, float32)으로 돌려준다. 포크 파일·`load_depth` 로직은 그대로다. 깊이 EXR 은 RGB 세 채널이 같은 값이라(실측) 채널 순서는 결과에 영향이 없다. 설정 전(`--exr on` 이어도 cv2 직접) 실패, 설정 후(프록시) 성공·10회 읽기 확인.
+- **EXR 읽기 — 증상과 원인:** `OPENCV_IO_ENABLE_OPENEXR=1` 을 설정해도 조건 렌더 후처리가 `load_depth`(`utils/render_rgb_and_mask.py:85-86`)에서 `TypeError: 'NoneType' object is not subscriptable` 로 죽었다. 현행 env 의 opencv 5.0.0 이 **OpenEXR 없이 빌드**돼 있어(`cv2.getBuildInformation()`: `OpenEXR: NO`, 실측) `cv2.imread(*.exr)` 가 None 을 돌려준다. 환경변수로는 해결되지 않는다(코덱 자체가 없다). 포크 스크립트는 `import cv2` 뒤에 환경변수를 설정하지도 않는다 — 변수 위치와 무관하게 이 빌드에서는 실패한다.
+- **우회 (래퍼 안, 설치·포크 수정 없음):** `reference/run_condition_render.py` 의 `_Cv2ExrViaBpy` 가 포크 모듈의 `cv2` 이름만 프록시로 바꾼다. `.exr` 이 아닌 호출(렌더 PNG 읽기, `imwrite` 등)은 전부 진짜 cv2 로 넘긴다. `.exr` 은 `bpy.data.images.load` → `img.pixels` 를 (H,W,C) float32 로 만들고 행을 뒤집어(Blender 픽셀 버퍼는 아래→위) 채널을 BGR(A) 순으로 바꿔 돌려준다. 포크의 `load_depth` 식(`[..., 0]`, `> 1000.0`, `10000.0` 대입)은 그대로 돈다.
+- **반환값이 원 cv2 와 같은가 (근거):**
+
+  | 항목 | 원 cv2 `imread(path, IMREAD_UNCHANGED)` (OpenEXR 있는 빌드) | 프록시 | 결과 영향 |
+  |---|---|---|---|
+  | 파일 | 깊이 EXR: 채널 B·G·R 3개, 각 **FLOAT(32bit)**, 알파 없음 (헤더 직접 파싱, 실측). bpyrenderer `enable_depth_output` 이 `file_format="OPEN_EXR"`, `color_depth="32"` 로 저장(`bpyrenderer/render_output.py:211-212`, 코드확인) | – | – |
+  | dtype | float32 (32bit float 채널 → CV_32F) | float32 (실측) | 없음 |
+  | 채널 수·순서 | 3채널 BGR | **4채널 BGRA**(bpy 가 A=1.0 을 붙인다, 실측 `img.channels = 4`) | 없음 — `load_depth` 는 `[..., 0]`(B) 만 쓴다. 프록시 `[..., 0]` 도 B. 세 채널 값이 같다(실측 `R == B`) |
+  | 행 방향 | 위→아래 | 위→아래(뒤집음) | 없음 — 실측: 깊이 < 1000 영역이 같은 시점 RGB 렌더 알파와 5시점 모두 **100.00% 일치**(뒤집지 않으면 85.7–96.4%) |
+  | 값 | 파일 float 그대로 | `img.pixels` float 그대로(EXR 은 float 버퍼, 색 변환 없음 — 배경 1e10, 물체 1.56… 실측) | 없음 |
+
+  추가 대조(실측): 실패한 회차가 남긴 원본 렌더(rgb/, mask_3d/ EXR)에 위 프록시 읽기 + 포크 `process` 의 마스크 식을 적용한 결과가, 프록시로 끝까지 돈 다른 회차(run1, 같은 입력)의 `mask_000{0..4}.png` 와 **5시점 모두 비트 동일**. → 실질적으로 원 cv2 경로와 같은 마스크를 낸다고 판단한다(원 cv2 + OpenEXR 빌드로 직접 대조한 것은 아니다 — 그 빌드가 장비에 없어 `미검증`).
+- **기존 운영은 어떻게 넘겼나 (코드확인·로그 실측):** `<V3>/tools/exr_mask_postprocess.py`(미추적, A-2 보관 대상)가 같은 문제를 같은 방식으로 우회했다 — 포크 스크립트가 렌더 10장을 끝낸 뒤 후처리에서 죽으면, 남은 `rgb/`·`mask_3d/` EXR 을 bpy(`images.load` → `pixels.foreach_get` → `[::-1, :, 0]`)로 읽어 포크와 글자 그대로 같은 식(`~(depth > 1000.0)`, `depth[mask<0.5]=10000.0`, `diff > 1e-4`, `diff[mask_mask <= 0.5]=0`)으로 `images/mask_*.png` 를 따로 만들었다. `<DATA>/vh-track/w43-cond.log` 에 `load_depth` TypeError 직후 마스크 화소 수가 찍힌 것이 그 흔적이다. 이번 래퍼는 같은 읽기를 포크 `process` 안에서 하도록 바꿨을 뿐이다(렌더를 두 번 돌리지 않고, 후처리 시간도 포크 코드로 잰다).
 
 ## 7. 실행 정보
 
-- 자산: moto-b, ai-ar-v3 `19ed91f` `assets/moto-b/parent` 376청크 → `reference/prepare_moto_b.py` 로 정규화 GLB(중심 (−0.0010, 0.0010, −0.0002), 배율 1.00733 → 150뷰 렌더의 정규화는 사실상 항등). mask.glb = 마스크 셀 정육면체 합집합의 노출면(닫힌 표면). 정규화 후 다시 셀화하면 476 / 1,386 / 2,310 셀 그대로.
+- 자산: moto-b. 원저자 경로는 GLB 를 받지만 **moto-b 의 원본 GLB 는 이 장비에 없다**(`t2s-motorcycle` 은 다른 자산, SLat 12,333셀). 그래서 **ai-ar-v3 `19ed91f` `assets/moto-b/parent/*.cbin` 376청크에서 GLB 를 재구성했다** (`reference/prepare_moto_b.py`, CPU):
+  - 청크 이어 붙이기: ai-ar-v3 `server/glbbuild.cbin_dir_to_colored_mesh` 그대로 호출(청크별 정점·면을 오프셋만 더해 연결, 정점 병합 없음, 정점 색 있음). **정점 207,537 / 면 359,220**(다시 읽어도 같음, 실측). 중복 제거하면 정점 179,596(A-6 표와 같은 값).
+  - 프레임: `.cbin` 정점은 복셀 프레임(Z-up) → `frames.VOXEL_TO_GLB` 로 GLB(Y-up). glbbuild 의 `build_glb` 와 같은 변환이다.
+  - 정규화: VoxHammer 의 조건 렌더(`render_rgb_and_mask.py:34`)와 mask.glb 복셀화(`delete_region_voxel.py`)는 정규화하지 않고, 150뷰 렌더(`bpy_render.py:231-250`)만 `scale = 1/max(bbox 변)`, bbox 중심을 원점으로 옮긴다. 세 단계가 같은 좌표계를 쓰도록 GLB 를 미리 같은 식으로 정규화했다: `p' = (p − c) × s`, c = GLB 프레임 bbox 중심 (−0.0010054, 0.0010255, −0.0001635), s = 1/0.99272 = **1.0073348**. 결과 bounds (−0.1981, −0.3755, −0.5000)–(0.1981, 0.3755, 0.5000), sha256 `989bb6e80d669d130939e66a8640a2f9e8c9d94080d3e175807ef8bbc5754f49`. 원래 bbox 가 이미 거의 단위 크기·원점 중심이라 변화는 0.7% 확대뿐이고, 150뷰 렌더의 자동 정규화는 사실상 항등이 된다.
+  - 이 GLB 는 디코더 원 메시(텍스처 없음, 정점 색) 이며 TRELLIS `to_glb` 결과(단순화 0.95 + 텍스처 굽기)가 아니다. 원저자 경로의 입력 GLB 성격이 운영 자산과 다를 수 있다 — 시간 기준선 용도로만 쓰고, 렌더·특징 단계 시간은 이 메시(면 35.9만) 기준이다.
+  - 마스크: mask.glb = 마스크 셀 정육면체 합집합의 노출면(닫힌 표면, 같은 정규화). 정규화 후 다시 셀화하면 476 / 1,386 / 2,310 셀 그대로. GLB 정점이 SLat 셀 안에 드는 비율 96.1%(셀 경계 위 정점 때문에 100% 아님).
 - 마스크 지문(셀, `deltacontract.mask_fingerprint`, 파일 meta 와 일치 확인): rider-head `9e237b53adf1…`, rear-wheel `28b22e0004e6…`, rear-wheel-full `88270814e860…`. 원저자 경로 `voxels_delete.ply` 는 rider-head 860 셀(마스크 476 전부 포함 + 384), volume 필터(임계 0.1)의 팽창.
 - 조건 시점: 두 마스크 모두 **view 0**(방위 0°, 측면). 근거 썸네일 `img/00-moto-b-rider-head-views.png`, `img/00-moto-b-rear-wheel-views.png` — view 0 이 편집 부위가 가려지지 않고 마스크 면적이 가장 크다(10,712 / 32,189 px).
 - 인페인팅 프롬프트(트랙 A 표와 같은 문구), 시드 0: rider-head "a red and gold Iron Man helmet as the rider's head", rear-wheel "a thick chunky knobby off-road rear tire". 조건 이미지 `img/00-moto-b-conditions.png`. 3회 모두 `2d_edit.png` 비트 동일(rider-head `fd3a0359…`, rear-wheel `3c0d4782…`). rear-wheel 은 육안상 변화가 작다(효능 약함, 미검증).
