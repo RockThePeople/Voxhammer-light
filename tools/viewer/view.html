@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VHL 3D 보기</title>
+<style>
+  :root { --bg:#fafafa; --fg:#1b1b1f; --muted:#6b6b75; --card:#fff; --line:#e3e3e8; --accent:#2457d6; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141417; --fg:#ececf0; --muted:#9a9aa6; --card:#1e1e23; --line:#2e2e35; --accent:#7aa2ff; } }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui, sans-serif; }
+  .wrap { display:grid; grid-template-columns:1fr 340px; height:100vh; }
+  @media (max-width: 800px) { .wrap { grid-template-columns:1fr; grid-template-rows:60vh auto; height:auto; } }
+  #stage { position:relative; min-height:300px; background:#2a2a30; }
+  #stage canvas { display:block; width:100%; height:100%; }
+  #hud { position:absolute; left:10px; top:10px; right:10px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  #hud a, #hud button, #hud select { padding:5px 9px; border-radius:6px; border:1px solid #555; background:#1d1d22cc; color:#eee;
+                                     font-size:12px; text-decoration:none; cursor:pointer; }
+  #hud label { color:#ddd; font-size:12px; background:#1d1d22cc; padding:5px 8px; border-radius:6px; border:1px solid #555; }
+  #status { position:absolute; left:10px; bottom:10px; color:#ddd; font-size:12px; background:#0008; padding:4px 8px; border-radius:6px; }
+  aside { border-left:1px solid var(--line); overflow:auto; padding:12px; }
+  h2 { font-size:14px; margin:0 0 4px; word-break:break-all; }
+  h3 { font-size:12px; color:var(--muted); margin:14px 0 6px; text-transform:uppercase; letter-spacing:.04em; }
+  .sub { color:var(--muted); font-size:12px; }
+  .imgs { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .imgs a { display:block; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#f2f2f4; }
+  .imgs img { width:100%; aspect-ratio:1; object-fit:contain; display:block; }
+  .imgs .cap { font-size:11px; padding:2px 4px; color:var(--muted); background:var(--card); word-break:break-all; }
+  ul.files { list-style:none; padding:0; margin:0; }
+  ul.files li { padding:2px 0; }
+  a { color:var(--accent); }
+  pre { white-space:pre-wrap; word-break:break-all; font-size:11px; background:var(--card); border:1px solid var(--line);
+        border-radius:6px; padding:8px; max-height:300px; overflow:auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="stage">
+    <div id="hud">
+      <a href="/">← 목록</a>
+      <select id="model" title="표시할 GLB"></select>
+      <select id="overlay" title="겹쳐 볼 GLB(반투명 빨강)"><option value="">겹치기 없음</option></select>
+      <label><input type="checkbox" id="wire"> 와이어</label>
+      <label><input type="checkbox" id="spin"> 자동 회전</label>
+      <button id="reset">시점 초기화</button>
+    </div>
+    <div id="status">불러오는 중…</div>
+  </div>
+  <aside>
+    <h2 id="title"></h2>
+    <div class="sub" id="sub"></div>
+    <div class="sub">마우스 왼쪽: 회전 · 오른쪽: 이동 · 휠: 확대</div>
+    <h3>이미지</h3>
+    <div class="imgs" id="imgs"></div>
+    <h3>파일</h3>
+    <ul class="files" id="files"></ul>
+    <pre id="text" hidden></pre>
+  </aside>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import { THREE, fileUrl, loadGLB, addLights, prepare, frame } from '/common.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const id = new URLSearchParams(location.search).get('id');
+const stage = document.getElementById('stage');
+const status = document.getElementById('status');
+const modelSel = document.getElementById('model');
+const overlaySel = document.getElementById('overlay');
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+stage.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x2a2a30);
+addLights(scene);
+const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+let main = null, over = null, info = null;
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / Math.max(h, 1);
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage);
+
+function dispose(obj) {
+  if (!obj) return;
+  scene.remove(obj);
+  obj.traverse((o) => {
+    if (!o.isMesh) return;
+    o.geometry.dispose();
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m && m.dispose());
+  });
+}
+
+function applyWire() {
+  const on = document.getElementById('wire').checked;
+  main && main.traverse((o) => o.isMesh && (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { m.wireframe = on; }));
+}
+
+async function showMain(name) {
+  status.textContent = `${name} 불러오는 중…`;
+  const t0 = performance.now();
+  const obj = await loadGLB(fileUrl(id, name));
+  const st = prepare(obj);
+  dispose(main);
+  main = obj;
+  scene.add(main);
+  info = frame(camera, main, controls.target);
+  controls.update();
+  applyWire();
+  const s = info.size;
+  status.textContent = `${name} · 정점 ${st.verts.toLocaleString()} · 면 ${Math.round(st.faces).toLocaleString()} · bbox ${s.x.toFixed(3)}×${s.y.toFixed(3)}×${s.z.toFixed(3)} · ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+}
+
+async function showOverlay(name) {
+  dispose(over);
+  over = null;
+  if (!name) return;
+  const obj = await loadGLB(fileUrl(id, name));
+  obj.traverse((o) => {
+    if (!o.isMesh) return;
+    o.material = new THREE.MeshBasicMaterial({ color: 0xff3030, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
+  });
+  over = obj;
+  scene.add(over);
+}
+
+async function init() {
+  const it = await (await fetch(`/api/item?id=${encodeURIComponent(id)}`)).json();
+  if (it.error) { status.textContent = '항목을 찾을 수 없다'; return; }
+  document.title = `VHL · ${it.title}`;
+  document.getElementById('title').textContent = it.title;
+  document.getElementById('sub').textContent = `${it.root_name} · ${new Date(it.mtime * 1000).toLocaleString()}`;
+  // 기본 표시: 마스크·voxel 이 아닌 첫 GLB. 마스크 GLB 는 겹치기 후보로.
+  const isMask = (n) => /mask|region|delete/i.test(n);
+  const pref = it.models.find((n) => /output|edit|result/i.test(n)) || it.models.find((n) => !isMask(n)) || it.models[0];
+  modelSel.innerHTML = it.models.map((n) => `<option ${n === pref ? 'selected' : ''}>${n}</option>`).join('');
+  overlaySel.innerHTML += it.models.map((n) => `<option>${n}</option>`).join('');
+  const imgs = document.getElementById('imgs');
+  imgs.innerHTML = it.images.map((n) => `<a href="${fileUrl(id, n)}" target="_blank"><img loading="lazy" src="${fileUrl(id, n)}" alt=""><div class="cap">${n}</div></a>`).join('') || '<div class="sub">없음</div>';
+  const files = document.getElementById('files');
+  files.innerHTML = [...it.models, ...it.texts].map((n) => `<li><a href="${fileUrl(id, n)}" data-n="${n}">${n}</a></li>`).join('');
+  files.addEventListener('click', async (e) => {
+    const n = e.target.dataset && e.target.dataset.n;
+    if (!n || /\.(glb|gltf)$/i.test(n)) return;
+    e.preventDefault();
+    const pre = document.getElementById('text');
+    let t = await (await fetch(fileUrl(id, n))).text();
+    if (/\.json$/i.test(n)) { try { t = JSON.stringify(JSON.parse(t), null, 2); } catch (err) {} }
+    pre.textContent = `# ${n}\n` + t.slice(0, 200000);
+    pre.hidden = false;
+  });
+  await showMain(pref);
+}
+
+modelSel.addEventListener('change', () => showMain(modelSel.value).catch((e) => { status.textContent = '불러오기 실패'; console.error(e); }));
+overlaySel.addEventListener('change', () => showOverlay(overlaySel.value));
+document.getElementById('wire').addEventListener('change', applyWire);
+document.getElementById('spin').addEventListener('change', (e) => { controls.autoRotate = e.target.checked; });
+document.getElementById('reset').addEventListener('click', () => { if (main) { frame(camera, main, controls.target); controls.update(); } });
+
+resize();
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+init().catch((e) => { status.textContent = '불러오기 실패: ' + e.message; console.error(e); });
+</script>
+</body>
+</html>
