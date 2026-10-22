@@ -1,0 +1,178 @@
+{
+ "item": "00s S-1 (rtx3090)",
+ "note": "이미지는 git 제외(ASSETS_DIR/track_a/<asset>/seed<N>/). sha256 과 생성 파라미터만 기록. S-2(a5000)가 track_a.json 으로 통합.",
+ "assets": {
+  "moto": {
+   "item": "00s S-1",
+   "asset": "moto",
+   "scenarios": [
+    "A-M1",
+    "A-M2"
+   ],
+   "created": "2026-10-22T12:23:07+09:00",
+   "t2i": {
+    "model": "Tongyi-MAI/Z-Image-Turbo",
+    "width": 1024,
+    "height": 1024,
+    "num_inference_steps": 9,
+    "guidance_scale": 0.0,
+    "dtype": "bfloat16",
+    "seed": 42,
+    "generator": "cuda",
+    "worker": "zimage_gen.py",
+    "worker_sha256": "94fc5a1e4d7eb9b64c99607bd426b15b2d5ee602dfe77ddca0502d43a5ee7629"
+   },
+   "bg_removal": {
+    "model": "ZhengPeng7/BiRefNet",
+    "dtype": "float16",
+    "resize": 1024,
+    "worker": "birefnet_seg.py",
+    "worker_sha256": "7f163745ef2f3709d1da38e08867bb176d430858b5c1d875c29822082f80b735"
+   },
+   "subject": "a man riding a black motorcycle",
+   "prompt_template": "{subject}, full body, 3/4 view, product photography, studio lighting, plain white background, centered, entire subject fully visible with margin, no text, no watermark",
+   "prompt": "a man riding a black motorcycle, full body, 3/4 view, product photography, studio lighting, plain white background, centered, entire subject fully visible with margin, no text, no watermark",
+   "env": {
+    "zimage": {
+     "python": "3.11.15",
+     "torch": "2.6.0+cu124",
+     "diffusers": "0.39.0",
+     "transformers": "5.14.1",
+     "torch_cuda": "12.4"
+    },
+    "birefnet": {
+     "python": "3.11.15",
+     "torch": "2.6.0+cu124",
+     "torchvision": "0.21.0+cu124",
+     "transformers": "5.14.1",
+     "torch_cuda": "12.4"
+    }
+   },
+   "gpu": "NVIDIA GeForce RTX 3090, 610.43.03",
+   "files": {
+    "image_rgb.png": "ba83d6d489ea414ac5c0d77c34257e8240e69297f610478c895579b37ade8119",
+    "input.png": "1909de04ad14ec999d8541352a700198dc5c1d960b717b549664b1c507c8c64f"
+   },
+   "note": ""
+  },
+  "snowman": {
+   "item": "00s S-1",
+   "asset": "snowman",
+   "scenarios": [
+    "A-S1",
+    "A-S2"
+   ],
+   "created": "2026-10-22T12:23:41+09:00",
+   "t2i": {
+    "model": "Tongyi-MAI/Z-Image-Turbo",
+    "width": 1024,
+    "height": 1024,
+    "num_inference_steps": 9,
+    "guidance_scale": 0.0,
+    "dtype": "bfloat16",
+    "seed": 42,
+    "generator": "cuda",
+    "worker": "zimage_gen.py",
+    "worker_sha256": "94fc5a1e4d7eb9b64c99607bd426b15b2d5ee602dfe77ddca0502d43a5ee7629"
+   },
+   "bg_removal": {
+    "model": "ZhengPeng7/BiRefNet",
+    "dtype": "float16",
+    "resize": 1024,
+    "worker": "birefnet_seg.py",
+    "worker_sha256": "7f163745ef2f3709d1da38e08867bb176d430858b5c1d875c29822082f80b735"
+   },
+   "subject": "a snowman with a carrot nose, stick arms and a red scarf",
+   "prompt_template": "{subject}, full body, 3/4 view, product photography, studio lighting, plain white background, centered, entire subject fully visible with margin, no text, no watermark",
+   "prompt": "a snowman with a carrot nose, stick arms and a red scarf, full body, 3/4 view, product photography, studio lighting, plain white background, centered, entire subject fully visible with margin, no text, no watermark",
+   "env": {
+    "zimage": {
+     "python": "3.11.15",
+     "torch": "2.6.0+cu124",
+     "diffusers": "0.39.0",
+     "transformers": "5.14.1",
+     "torch_cuda": "12.4"
+    },
+    "birefnet": {
+     "python": "3.11.15",
+     "torch": "2.6.0+cu124",
+     "torchvision": "0.21.0+cu124",
+     "transformers": "5.14.1",
+     "torch_cuda": "12.4"
+    }
+   },
+   "gpu": "NVIDIA GeForce RTX 3090, 610.43.03",
+   "files": {
+    "image_rgb.png": "cb00015b6ed4521d9fd3bd330e5fb6fb38505ce0ba012c2266e578d1e7ca89f6",
+    "input.png": "18060f3b0950517a5a51c98df3406ce24087ad3facfcc48d7b3a1000a6dabd34"
+   },
+   "note": ""
+  },
+  "chair": {
+   "item": "00s S-1",
+   "asset": "chair",
+   "scenarios": [
+    "A-C1",
+    "A-C2"
+   ],
+   "created": "2026-10-22T12:45:47+09:00",
+   "t2i": {
+    "model": "Tongyi-MAI/Z-Image-Turbo",
+    "width": 1024,
+    "height": 1024,
+    "num_inference_steps": 9,
+    "guidance_scale": 0.0,
+    "dtype": "bfloat16",
+    "seed": 43,
+    "generator": "cuda",
+    "worker": "zimage_gen.py",
+    "worker_sha256": "94fc5a1e4d7eb9b64c99607bd426b15b2d5ee602dfe77ddca0502d43a5ee7629"
+   },
+   "bg_removal": {
+    "model": "ZhengPeng7/BiRefNet",
+    "dtype": "float16",
+    "resize": 1024,
+    "worker": "birefnet_seg.py",
+    "worker_sha256": "7f163745ef2f3709d1da38e08867bb176d430858b5c1d875c29822082f80b735"
+   },
+   "subject": "a wooden armchair with armrests",
+   "prompt_template": "{subject}, full body, 3/4 view, product photography, studio lighting, plain white background, centered, entire subject fully visible with margin, no text, no watermark",
+   "prompt": "a wooden armchair with armrests, full body, 3/4 view, product photography, studio lighting, plain white background, centered, entire subject fully visible with margin, no text, no watermark",
+   "env": {
+    "zimage": {
+     "python": "3.11.15",
+     "torch": "2.6.0+cu124",
+     "diffusers": "0.39.0",
+     "transformers": "5.14.1",
+     "torch_cuda": "12.4"
+    },
+    "birefnet": {
+     "python": "3.11.15",
+     "torch": "2.6.0+cu124",
+     "torchvision": "0.21.0+cu124",
+     "transformers": "5.14.1",
+     "torch_cuda": "12.4"
+    }
+   },
+   "gpu": "NVIDIA GeForce RTX 3090, 610.43.03",
+   "files": {
+    "image_rgb.png": "75b52e27d60fbe6a16f68cee1d273e46910f95bdd9d50fa53f969f24dbdef017",
+    "input.png": "c967a054b08e338c921afa39effb2e9ec24cfb893cf01588d64a7c61cdd018fe"
+   },
+   "note": "seed 42 등받이에 세로 살 3개 → A-C1(\"vertical wooden slats\") 효능이 안 보일 수 있어 chief 지시(2026-10-22)로 seed 43부터 순서대로 탐색. seed 43 등받이가 살 없는 판 → 첫 해당 시드로 채택. 44–47 은 만들지 않음."
+  }
+ },
+ "rejected": {
+  "chair": [
+   {
+    "seed": 42,
+    "reason": "등받이에 세로 살(위 가로대 + 세로 살 3개) — A-C1 효능 판정 곤란",
+    "files": {
+     "image_rgb.png": "c9c90c65a7f44fc5df226371c018c34b2bbd6c7083a055747a96d3d4a2ddbab8",
+     "input.png": "129c302d82cc11d36e10197d08a7669ef97717d9d2024844d701153fcdbfc433"
+    },
+    "created": "2026-10-22T12:24:15+09:00"
+   }
+  ]
+ }
+}
