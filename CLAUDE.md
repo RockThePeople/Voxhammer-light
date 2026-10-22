@@ -60,7 +60,7 @@ VoxHammer(f33cd96 + 기준 패치) 기반 3D 편집 1회의 벽시계 시간을 
   - D51 정수 부호화 보존 판정, Stage 2 inversion 은 보존 좌표로 자른 SLat
   - 공동 bbox crop, 이미지 패치 마스크 CLS·register 5토큰 처리
   - W34 SLat 재사용 입력과 `slat_space=denormalized` 검사
-  - attention 백엔드: 원본 `edit_pipeline.py:2` 가 import 시 `ATTN_BACKEND=sdpa` 로 강제하지만 이것은 dense attention(Stage 1)에만 적용된다. sparse attention(Stage 2)은 `xformers`·`flash_attn` 만 받으므로 `flash_attn`(spconv)으로 돈다(`trellis/modules/sparse/__init__.py:16-25`, 00 A5000 실측). 이식본도 dense=sdpa, sparse=flash_attn 으로 맞춘다
+  - attention 계산: 편집 경로의 Stage 1·2 attention 은 포크의 `ss_attn_forward`(`edit_pipeline.py:183`)·`slat_attn_forward`(`:293`)가 `F.scaled_dot_product_attention` 을 **직접** 호출한다(코드확인). TRELLIS 의 sparse attention 백엔드(flash_attn)는 편집 경로에서 쓰이지 않고 디코더 등 교체되지 않은 모듈에서만 쓰인다. `edit_pipeline.py:2` 의 `ATTN_BACKEND=sdpa` 는 그 밖의 dense 모듈에 적용된다. 이식본도 같은 호출을 그대로 쓴다(00 A5000 로그 `Attention: flash_attn` 은 sparse 모듈 import 시 출력)
 
 ## 동등성 허용치 (요구사항서 6장)
 
