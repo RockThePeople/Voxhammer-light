@@ -75,7 +75,7 @@
 - services/common/http-contract.md 병합(PR #8), §4 결정: render_id 24 h 보관·RENDER_UNKNOWN 시 ①부터, 기존 image 필드 즉시 폐지, 멱등 키에 2d_edit 해시 제안, view 0–4 요청마다.
 
 ## 미해결
-- **현행 코드 보관(요구사항서 2장 제약, 0번 A-2) 미완료.** 3090 인페인팅 도구는 `legacy/rtx3090/flux_fill/` 에 보관됨. A5000 편집 래퍼(ai-ar-v3/tools 미추적 19개 + env.sh)와 편집 서비스(ai-ar-prototype server/api·lab·repaint)는 작업 세션 권한 검사에 막혀 보류 중. 해결: 사용자가 A5000 세션의 복사 권한 요청을 승인하거나 직접 복사(홈 경로만 자리표시자). 4번 R8a 전에 끝낸다.
+- **현행 코드 보관(요구사항서 2장 제약, 0번 A-2) 미완료.** 3090 인페인팅 도구는 `legacy/rtx3090/flux_fill/` 에 보관됨. A5000 편집 래퍼(ai-ar-v3/tools 미추적 19개 + env.sh)와 편집 서비스(ai-ar-prototype server/api·lab·repaint)는 작업 세션 권한 검사에 막혀 보류 중. **2026-10-22 사용자 결정 (가): A5000 세션이 `00-kickoff.md` A-2 목록대로 `legacy/a5000/` 에 복사, 사용자가 권한 요청 승인.** 브랜치 `item/00-archive-a5000`, 결과 무관 항목이라 chief 검토 후 병합하고 고객사에는 보고만. 00a 스캔상 실제 비밀 없음(홈 경로 33행만 자리표시자). 4번 R8a 전에 끝낸다.
 - R9 채택 관점: 요구사항서 2장이 인페인팅 모델을 `nunchaku-ai/nunchaku-flux.1-fill-dev`(INT4)로 지정했다. 따라서 R9 는 "INT4 를 쓸지"가 아니라 "INT4 로 품질을 맞추는 방법"을 찾는 항목이다. 품질 게이트(4.1-7)에 따라 기본 꺼짐으로 두고, 원인 분리 결과와 3D 품질로 고객사가 확정한다.
 - ~~3090 토큰~~ 해결(2026-10-22): rockthepeople fine-grained 토큰을 3090 `.env` 에 설정, 라이선스 동의 확인(토큰 없이 401 GatedRepo, 있으면 200/302). A5000 은 HF_TOKEN 설정됨(Edit3D-Bench 용), FLUX 원본은 이미 캐시에 있음.
 - 미러 동일성 확인(참고): 3090 미러 23개 = 원본 main 358293da(3090 실측). chief 대조: A5000 원본 sha256 표와 공통 21개 전부 일치. R9 는 미러 경로로 착수 가능(E11).
