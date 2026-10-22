@@ -67,9 +67,12 @@ VoxHammer(f33cd96 + 기준 패치) 기반 3D 편집 1회의 벽시계 시간을 
 | 대상 | 합격 |
 |---|---|
 | Stage 1 coords | 완전 일치 |
-| Stage 2 feats | max\|Δ\| ≤ 4.7e-2, 동일 코드 2회 실행 차이 병기 |
+| Stage 2 feats (보존 셀) | 비트 동일 |
+| Stage 2 feats (편집 셀) | 같은 시드 비교에서 max\|Δ\| ≤ 4.7e-2, 동일 코드 2회 실행 차이 병기 |
 | 보존 영역 청크 | 승계 바이트 동일 |
 | 테스트 | conformance 53/53, ai-ar-v3 서버 360 passed |
+
+- 비교 조건(chief 2026-10-22, 00 A5000 실측 근거): 입력 SLat 을 고정한다(W34 SLat 재사용 입력, 또는 원저자 경로는 `--reuse_render`). 원저자 경로는 150뷰 렌더 잡음 때문에 회차마다 입력 SLat 이 달라 비교에 쓸 수 없다. 편집 셀은 포크의 시드 없는 `torch.randn`(`edit_pipeline.py:512`) 때문에 래퍼에서 `run_edit` 직전에 `torch.manual_seed(0)` 을 양쪽에 같이 건다(포크 수정 없음).
 
 ## 계측 규칙 (요구사항서 6장)
 
