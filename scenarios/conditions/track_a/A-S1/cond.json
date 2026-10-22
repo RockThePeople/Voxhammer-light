@@ -1,0 +1,40 @@
+{
+ "scenario": "A-S1",
+ "asset": "snowman",
+ "prompt": "a snowman holding a straw broom in its right hand",
+ "seed": 0,
+ "edit_view": 1,
+ "view_34": 3,
+ "mask_px_per_view": [
+  102991,
+  130001,
+  85873,
+  40967,
+  0
+ ],
+ "files_sha256": {
+  "2d_render.png": "dabce6b042eee5c4f7f64f51b1ffcd0f1eaa514ce8ed3380d5090f2058cf29dd",
+  "2d_mask.png": "ec27952a93a4ef8c824b02e2b573e42050cf0c3108edf217ef26cfd8f9f67cf1",
+  "2d_edit.png": "d7db923f58df051bdc72da3d4be944d0f38ebd77d25dbc2b98a8f433c79ea191"
+ },
+ "seg1_condition_render_s": 29.34991799108684,
+ "seg1_parts_s": {
+  "source_5views": 15.676185871474445,
+  "mask_5views": 10.627247232943773,
+  "postprocess": 3.0464848866686225
+ },
+ "seg2_inpaint_s": {
+  "load": 0.9454162055626512,
+  "inpaint": 86.44856505002826
+ },
+ "inpaint_peak_GiB": 22.788830280303955,
+ "flux": {
+  "model_id": "black-forest-labs/FLUX.1-Fill-dev",
+  "steps": 50,
+  "guidance": 30,
+  "resolution": 1024,
+  "dtype": "bfloat16",
+  "offload": "enable_model_cpu_offload"
+ },
+ "exr_reader": "bpy (cv2 proxy)"
+}

@@ -1,0 +1,40 @@
+{
+ "scenario": "A-C2",
+ "asset": "chair",
+ "prompt": "the chair without armrests, plain seat sides",
+ "seed": 0,
+ "edit_view": 1,
+ "view_34": 3,
+ "mask_px_per_view": [
+  140232,
+  164586,
+  107001,
+  164443,
+  140123
+ ],
+ "files_sha256": {
+  "2d_render.png": "ea090c6d12a467be5c4d9da9f7113c05b899bbd8de20787f47743211e5782f69",
+  "2d_mask.png": "70090a827c8badac8897b8e0ef7570ec8a63979731f9863626c863329eeaf9f7",
+  "2d_edit.png": "b353816f5905be9f8b99baddeb9e4eb705ed03f6d95d34472aaf1f5890705531"
+ },
+ "seg1_condition_render_s": 29.252224257215858,
+ "seg1_parts_s": {
+  "source_5views": 13.997402713634074,
+  "mask_5views": 12.221349353902042,
+  "postprocess": 3.033472189679742
+ },
+ "seg2_inpaint_s": {
+  "load": 0.9643493266776204,
+  "inpaint": 86.76993513293564
+ },
+ "inpaint_peak_GiB": 22.788341999053955,
+ "flux": {
+  "model_id": "black-forest-labs/FLUX.1-Fill-dev",
+  "steps": 50,
+  "guidance": 30,
+  "resolution": 1024,
+  "dtype": "bfloat16",
+  "offload": "enable_model_cpu_offload"
+ },
+ "exr_reader": "bpy (cv2 proxy)"
+}

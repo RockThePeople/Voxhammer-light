@@ -1,0 +1,40 @@
+{
+ "scenario": "A-M2",
+ "asset": "moto",
+ "prompt": "a thick chunky knobby off-road rear tire",
+ "seed": 0,
+ "edit_view": 0,
+ "view_34": 1,
+ "mask_px_per_view": [
+  68252,
+  43884,
+  8454,
+  41461,
+  67599
+ ],
+ "files_sha256": {
+  "2d_render.png": "1d79daff8d9219fe27793eef8b28c07ba47c641786bf63c12181189c8c7058b5",
+  "2d_mask.png": "6b6c7edb19357e98b46158c41b064d445b3633ad4d5e17cd641541e467aa7a9e",
+  "2d_edit.png": "ec57ad5ed6e9847ac39d25bbfbc93f1c26563e171ba780c30a712c9779cdf118"
+ },
+ "seg1_condition_render_s": 26.429888390004635,
+ "seg1_parts_s": {
+  "source_5views": 13.538316858932376,
+  "mask_5views": 9.868490111082792,
+  "postprocess": 3.0230814199894667
+ },
+ "seg2_inpaint_s": {
+  "load": 0.957671201787889,
+  "inpaint": 86.44844670593739
+ },
+ "inpaint_peak_GiB": 22.788341999053955,
+ "flux": {
+  "model_id": "black-forest-labs/FLUX.1-Fill-dev",
+  "steps": 50,
+  "guidance": 30,
+  "resolution": 1024,
+  "dtype": "bfloat16",
+  "offload": "enable_model_cpu_offload"
+ },
+ "exr_reader": "bpy (cv2 proxy)"
+}

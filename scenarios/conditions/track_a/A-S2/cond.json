@@ -1,0 +1,40 @@
+{
+ "scenario": "A-S2",
+ "asset": "snowman",
+ "prompt": "a small round red ball nose",
+ "seed": 0,
+ "edit_view": 4,
+ "view_34": 1,
+ "mask_px_per_view": [
+  7196,
+  2688,
+  0,
+  2702,
+  7203
+ ],
+ "files_sha256": {
+  "2d_render.png": "af0dbe87a6bbf64f392124c66306bea52065232937caa838c8b884978fd5dffc",
+  "2d_mask.png": "60091a9487df836104df6422b310a317689d1542d271f52f0891fad1a70fa6da",
+  "2d_edit.png": "a0450575b5102f9d931563e9096f65ff192988eb82db98c66d9627a7e2081303"
+ },
+ "seg1_condition_render_s": 27.241154892370105,
+ "seg1_parts_s": {
+  "source_5views": 15.89411569479853,
+  "mask_5views": 8.285700811073184,
+  "postprocess": 3.0613383864983916
+ },
+ "seg2_inpaint_s": {
+  "load": 0.9499624716117978,
+  "inpaint": 86.64531671255827
+ },
+ "inpaint_peak_GiB": 22.788830280303955,
+ "flux": {
+  "model_id": "black-forest-labs/FLUX.1-Fill-dev",
+  "steps": 50,
+  "guidance": 30,
+  "resolution": 1024,
+  "dtype": "bfloat16",
+  "offload": "enable_model_cpu_offload"
+ },
+ "exr_reader": "bpy (cv2 proxy)"
+}

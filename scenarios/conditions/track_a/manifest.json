@@ -1,0 +1,71 @@
+{
+ "note": "00s2 F-2 트랙 A 조건 이미지(동결). A5000 bf16 FLUX.1-Fill-dev, 1024², 50스텝, guidance 30, seed 0. R9 비교용 전달 — main 에 병합하지 않는다.",
+ "scenarios": {
+  "A-C1": {
+   "asset": "chair",
+   "prompt": "a tall backrest with vertical wooden slats",
+   "seed": 0,
+   "edit_view": 2,
+   "sha256": {
+    "2d_render.png": "656acca25f881036771f18b668c41b335657623da05d56bd4124501d45e2583f",
+    "2d_mask.png": "32b7e31144ba376aaccda59f385efd279097d66065d42a99b00133f7c53aab03",
+    "2d_edit.png": "99512eb4b1ae209de2e2f27f376b8a48a37c038c57974b4ea7a3251b8d2f12dc"
+   }
+  },
+  "A-C2": {
+   "asset": "chair",
+   "prompt": "the chair without armrests, plain seat sides",
+   "seed": 0,
+   "edit_view": 1,
+   "sha256": {
+    "2d_render.png": "ea090c6d12a467be5c4d9da9f7113c05b899bbd8de20787f47743211e5782f69",
+    "2d_mask.png": "70090a827c8badac8897b8e0ef7570ec8a63979731f9863626c863329eeaf9f7",
+    "2d_edit.png": "b353816f5905be9f8b99baddeb9e4eb705ed03f6d95d34472aaf1f5890705531"
+   }
+  },
+  "A-M1": {
+   "asset": "moto",
+   "prompt": "a red and gold Iron Man helmet as the rider's head",
+   "seed": 0,
+   "edit_view": 3,
+   "sha256": {
+    "2d_render.png": "6dc40f6f8e7c8978bfc0f5c9b59e5726017f69da8565900e7a9b33db531f9d69",
+    "2d_mask.png": "ce84b8da3951905304e29bf93c648b2261d639f7f114174c89771022682645c6",
+    "2d_edit.png": "e2fa4ee464aa95ef59af7cb416cf1020caa77f544b497b47964488e26598363c"
+   }
+  },
+  "A-M2": {
+   "asset": "moto",
+   "prompt": "a thick chunky knobby off-road rear tire",
+   "seed": 0,
+   "edit_view": 0,
+   "sha256": {
+    "2d_render.png": "1d79daff8d9219fe27793eef8b28c07ba47c641786bf63c12181189c8c7058b5",
+    "2d_mask.png": "6b6c7edb19357e98b46158c41b064d445b3633ad4d5e17cd641541e467aa7a9e",
+    "2d_edit.png": "ec57ad5ed6e9847ac39d25bbfbc93f1c26563e171ba780c30a712c9779cdf118"
+   }
+  },
+  "A-S1": {
+   "asset": "snowman",
+   "prompt": "a snowman holding a straw broom in its right hand",
+   "seed": 0,
+   "edit_view": 1,
+   "sha256": {
+    "2d_render.png": "dabce6b042eee5c4f7f64f51b1ffcd0f1eaa514ce8ed3380d5090f2058cf29dd",
+    "2d_mask.png": "ec27952a93a4ef8c824b02e2b573e42050cf0c3108edf217ef26cfd8f9f67cf1",
+    "2d_edit.png": "d7db923f58df051bdc72da3d4be944d0f38ebd77d25dbc2b98a8f433c79ea191"
+   }
+  },
+  "A-S2": {
+   "asset": "snowman",
+   "prompt": "a small round red ball nose",
+   "seed": 0,
+   "edit_view": 4,
+   "sha256": {
+    "2d_render.png": "af0dbe87a6bbf64f392124c66306bea52065232937caa838c8b884978fd5dffc",
+    "2d_mask.png": "60091a9487df836104df6422b310a317689d1542d271f52f0891fad1a70fa6da",
+    "2d_edit.png": "a0450575b5102f9d931563e9096f65ff192988eb82db98c66d9627a7e2081303"
+   }
+  }
+ }
+}
