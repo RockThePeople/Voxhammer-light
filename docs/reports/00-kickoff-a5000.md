@@ -1,0 +1,227 @@
+# 00 착수 — 보고서 (a5000)
+
+- 장비: a5000 (RTX A5000 24 GB, 드라이버 575.57.08, Xeon Gold 6226R 32T, RAM 124 GiB)
+- 브랜치·커밋: `item/00-kickoff-a5000` (main `4a2e729` 기반)
+- 기준 상태: 00a 승인 main `361127c` → 이 브랜치는 `4a2e729` 기반
+- 토글: 없음 (0번은 계측만, 코드 동작 변경 없음)
+- 실행 env: 현행 `<VH_CUR>/.venv` (Python 3.10.12, torch 2.4.0+cu118) — 설치 없음. 기준 사본 `build/reference-v2` (`PYTHONPATH`·cwd 로 import, 로그로 확인)
+- 계측 JSON: `$RUNS_DIR/2026-10-22/moto-b/` (git 제외), sha256 은 7절
+
+## 1. 예상 (계측 전에 적은 것)
+
+- 구간 4–7 합: 116–129 s(기존 W41·W42 실측)와 같은 자릿수(10² s). 원저자 경로는 150뷰 렌더·특징 추출이 붙어 편집 1회 전체는 300 s 이상.
+- 구간 2(인페인팅): 00a 기록과 같은 자릿수(10² s). VRAM 피크는 22 GiB 대.
+- 구간 8: 30–40 s(모델 적재).
+- 동일 코드 2회: Stage 1 coords 일치, Stage 2 feats max|Δ| 는 4.7e-2 근처.
+
+## 2. 변경 파일
+
+| 파일 | 내용 |
+|---|---|
+| `reference/slat_capture.py` | **A-3** R2 SLat 포획(신규 작성, 복사 아님). `decode_slat` 인스턴스 속성만 잠시 바꿔 입력 SLat 저장 → coords int32 (N,4), feats float32 (N,8), `slat_space=denormalized`, norm 메타 |
+| `reference/meter.py` | 구간 계측(동기화·중첩 VRAM 피크·nvidia-smi/RSS 0.1 s 샘플·텐서 바이트) |
+| `reference/run_reference.py` | **A-4** 기준선 래퍼. 포크 `inference.run_complete_pipeline` 을 `inference.py __main__` 과 같은 기본 인자로 호출, 모듈 속성 교체로 구간 계측, 호출 횟수 검사, `--profile`, `--reuse_render`(동등성 대조 전용) |
+| `reference/run_condition_render.py` | **A-5** 구간 1 (포크 `utils/render_rgb_and_mask.py` 그대로, EXR 읽기만 우회 — 4절 참고) |
+| `reference/run_inpaint.py` | **A-5** 구간 2 (포크 `utils/inpaint.inpaint` 기본값 그대로, bf16 + `enable_model_cpu_offload`) |
+| `reference/compare_renders.py` | **A-5b** 실행 간 픽셀 차이표, 5시점 썸네일 |
+| `reference/prepare_moto_b.py` | moto-b 원저자 경로 입력(정규화 model.glb, mask.glb) 생성 (CPU) |
+| `reference/check_moto_b_slat.py` | **A-6** moto-b feats SLat 확인 1–5 |
+| `reference/summarize.py`, `reference/SCHEMA.md` | 계측 JSON 요약, 스키마 `vhl-run/1` |
+| `tests/cpu/test_slat_capture.py` | A-3 CPU 테스트 2건 (통과) |
+| `tests/customer/gpu/*.py` | **A-7** GPU fp16 사본 (원본 대비 diff 는 부록 A) |
+| `env/a5000-flux-fill-dev-sha256.txt` | FLUX.1-Fill-dev 파일별 sha256 |
+| `docs/reports/img/00-*.png` | 5시점 썸네일, 조건 이미지 |
+
+새 의존성: 현행 `.venv` 에는 없음. A-8 용 별도 `venv-tests`(시스템 python3 3.10.12): `server/requirements.txt` + pytest 9.1.1, fastapi 0.159.1, python-multipart 0.0.32, httpx 0.28.1, anthropic 2.1.0 (그 밖 pydantic 2.14.1, numpy 2.2.6, trimesh 5.1.1).
+
+## 3. 구간 시간 (moto-b, 원저자 경로, 각 마스크 3회 평균±표준편차, 단위 s, 실측)
+
+조건: A5000 · moto-b(ai-ar-v3 `19ed91f` parent 376청크 → 정규화 GLB, sha `989bb6e8…`) · 커밋 `809a1ad`+작업 트리(이 PR 의 계측 스크립트, 커밋 전 상태) · 실행 3회 + 프로파일 1회(평균 제외).
+
+| 구간 | rider-head (476셀, `9e237b53adf1`) | rear-wheel (1,386셀, `28b22e0004e6`) | 근거 |
+|---|---|---|---|
+| 1 조건 렌더 (원본 5시점 / 마스크 5시점 / 2D 후처리) | 26.02 ± 1.01 (14.45 / 8.56 / 3.02) | 26.15 ± 0.03 (14.26 / 8.87 / 3.01) | 실측 |
+| 2 인페인팅 (적재 / 추론), 장비 간 전송 | 87.97 (0.98 / 86.97 ± 0.36), 전송 0 | 88.40 (0.97 / 87.43 ± 0.11), 전송 0 | 실측 |
+| 자산 등록 (150뷰 렌더 / 특징 / SLat 인코딩) | 119.70 ± 0.15 (96.0 / 23.5 / 0.2) | 118.85 ± 0.14 | 실측 |
+| 3 전처리 (mask.glb 복셀화 / 이미지 전처리 / 기타) | 43.54 ± 3.33 (≈41.8 / 1.4 / 0.3) | 43.74 ± 2.55 | 실측 |
+| 4 Stage 1 inv / den | 42.46 ± 0.21 (27.1 / 15.3) | 42.39 ± 0.11 | 실측 |
+| 5 Stage 1 디코딩 | 0.03 | 0.03 | 실측 |
+| 6 Stage 2 inv / den | 19.83 ± 0.10 (12.1 / 7.7) | 19.20 ± 0.15 | 실측 |
+| 7 디코딩·출력 (mesh / gs / to_glb / export / 재청킹) | 16.62 ± 1.07 (0.4 / 0.0 / 15.6 / 0.4 / 없음) | 18.19 ± 2.79 | 실측 |
+| 8 모델 로드 (import / from_pretrained+cuda), 큐 | 31.88 ± 0.62 (5.5 / 26.2), 큐 없음 | 30.57 ± 0.22 | 실측 |
+| **4–7 합** | **78.94 ± 1.33** | **79.81 ± 2.94** | 실측 |
+| `run_complete_pipeline` 전체(등록+3–7) | 242.25 ± 1.99 | 242.46 ± 3.33 | 실측 |
+| 편집 1회 합계 1–8 + 등록 | ≈ 388 | ≈ 390 | 실측 합산 |
+| 감싸지 않은 시간(전체 − 구간 합) | 0.06 | 0.06 | 실측 |
+
+- 구간 2 의 "적재" 1 s 는 `from_pretrained` 가 safetensors 를 지연 매핑해서다. 실제 가중치 읽기·CPU→GPU 이동은 오프로딩 훅이 추론 중에 하므로 "추론" 87 s 안에 들어 있다(추론). 두 몫을 span 으로는 나눌 수 없다.
+- 구간 5(SS 디코더)는 30 ms 로 nvidia-smi 0.1 s 샘플 창보다 짧아 smi 값이 비는 회차가 있다.
+- 재청킹은 현행 VoxHammer 경로(GLB 출력)에 없다. `.cbin` 직행은 2번 R4 에서 생긴다.
+- **116–129 s(구간 4–7) 자릿수 대조(참고, 판정 아님):** 78.9 / 79.8 s → 같은 자릿수(10² s 아래쪽). 기존 실측보다 짧은 이유는 가르지 않았다(자산·셀 수·마스크가 다르다).
+- **경로 실행 증거:** 모든 회차에서 `calls_match_expected = {}`(Stage 1/2 inv·den 각 1, get_cond 2, preprocess 1, 디코더 각 1, to_glb 1, 150뷰 렌더·특징·mask 복셀화·인코딩 각 1), `decode_slat_calls = 1`, `features.npz`·`voxels.ply`·`voxels_delete.ply`·output.glb 생성, 로그 `[D51] coords_src 9423 · coords_delete 860 · coords_preserve 8915`(rider-head).
+- **실행 환경 로그:** `ATTN_BACKEND=sdpa`(dense), sparse attention `flash_attn`, `SPCONV_ALGO=native`, `W39_ATTN_MASK` 미설정·실효 False, 포크 파일 = `build/reference-v2/...`.
+
+### 3a. 구간 4·6 내부 분해 (프로파일 1회, rider-head, 평균 제외, 실측)
+
+`torch.profiler`(CPU+CUDA). 장치 시간 합(µs → ms). 프로파일러 오버헤드로 wall 이 늘었다(전체 512 s, 평소 242 s).
+
+| 함수 | wall (s) | 장치 self 합 (ms) | DtoH memcpy | HtoD memcpy | 매칭 eq / all / argmax | 나머지(대부분 forward) |
+|---|---|---|---|---|---|---|
+| stage1_inverse | 30.1 | 45,824 | **14,505** | 0.2 | – | 31,319 |
+| stage1_denoise | 15.9 | 29,441 | 0.0 | **4,816** | – | 24,625 |
+| stage2_inverse | 15.7 | 14,178 | **4,322** | 0.1 | 29.5 / 33.1 / – (8,965 / 8,915 회) | 9,793 |
+| stage2_denoise | 9.9 | 12,806 | 1.2 | 1,433 | **403 / 1,154 / 245** (4,902 / 4,852 / 4,852 회) | 9,568 |
+
+- 장치 self 합이 wall 보다 큰 것은 복사 엔진과 계산 커널이 겹쳐 돌기 때문이다(추론).
+- stage2_inverse 의 eq·all 8,9xx 회는 `sample_slat_inverse` 의 `for coord in coords_mask` 루프(`edit_pipeline.py:492-493`)다. 장치 시간은 작고 대부분 CPU 커널 발행이다.
+
+### 3b. 캐시 크기 (rider-head r1, 실측)
+
+| 캐시 | 장치 | 바이트 | 항목 |
+|---|---|---|---|
+| Stage 1 `ss_kv` | CPU | **47.32 GB** | 8,448 |
+| Stage 1 `ss_latent` | CPU | 3.3 MB | 25 |
+| Stage 2 `slat_kv` | CPU | **15.08 GB** | 4,800 |
+| Stage 2 `slat_latent` | CPU | 10.7 MB | 25 |
+
+## 4. 메모리 (rider-head 3회 최대, 실측)
+
+| 구간 | max_memory_allocated | nvidia-smi (MiB) | RSS 피크 (GiB) | 캐시 텐서 바이트 |
+|---|---|---|---|---|
+| 1 조건 렌더 | (torch 미사용) | – | 0.6 | – |
+| 2 인페인팅 | 22.79 GiB | 24,093 | 32.7 | – |
+| 자산 등록 | 13.83 GiB | 15,249 | 13.4 | – |
+| 3 | 5.70 GiB | 15,249 | 7.8 | – |
+| 4 | 5.80 GiB | 15,249 | 49.5 | ss_kv 47.3 GB |
+| 5 | 5.79 GiB | – | – | – |
+| 6 | 6.25 GiB | 15,251 | 63.6 | slat_kv 15.1 GB |
+| 7 | 10.36 GiB | 15,493 | 66.0 | – |
+| 8 | 5.62 GiB | 5,839 | 7.0 | – |
+
+nvidia-smi 는 프로세스 전체(캐싱 할당자 예약 포함)라 allocated 보다 크다. RSS 66 GiB 는 요구사항서의 "편집 1회 약 74 GiB"와 같은 자릿수.
+
+## 5. 동등성
+
+| 대상 | 기준 | 결과 | 판정 |
+|---|---|---|---|
+| Stage 1 coords (원저자 경로, 회차 간) | 완전 일치 | rider-head 9,912 셀 r1=r2=r3, rear-wheel 9,374 셀 r1=r2=r3 | 일치 (실측) |
+| Stage 2 feats max\|Δ\| (원저자 경로, 회차 간) | 4.7e-2 | 보존 셀 1.50–1.90, 편집 셀 3.38–8.12 | **허용치와 비교 불가** (아래) |
+| Stage 2 feats (렌더 고정 대조 2회) | 4.7e-2 | 5c 참고 | – |
+
+**원인 분리(실측):** 회차마다 150뷰 렌더를 새로 해서 `voxels.ply` 는 같지만(sha `add0d0fc…` 3회 동일) `features.npz` 는 회차마다 다르다(Cycles 샘플 잡음 → DINOv2 특징). 그래서 `slat_src` 자체가 회차마다 다르고, Stage 2 가 보존 셀에 덮어쓰는 값도 다르다(보존 셀 max|Δ| ≈ 1.5). 편집 셀에는 추가로 `sample_slat_denoise` 의 시드 없는 `torch.randn`(`edit_pipeline.py:512`) 이 들어간다. 4.7e-2 는 입력 SLat 이 고정된 조건의 바닥값이라 원저자 경로 회차 간 비교에는 맞지 않는다.
+
+### 5c. 렌더 고정 대조 (`--reuse_render`, r1 의 150뷰·mesh 재사용, 특징 추출부터 다시)
+
+(결과는 실행 후 기입)
+
+## 6. 예상과의 차이와 원인
+
+- 구간 4–7 합 79 s 는 예상(116–129 s 자릿수) 안이지만 아래쪽이다. 원인은 가르지 않았다.
+- Stage 2 feats 회차 간 차이가 예상(≈4.7e-2)보다 두 자릿수 크다 → 5절의 원인 분리.
+- **EXR 읽기:** `OPENCV_IO_ENABLE_OPENEXR=1` 을 설정해도 조건 렌더 후처리가 실패했다(`load_depth` 에서 `TypeError: 'NoneType' object is not subscriptable`). 현행 env 의 opencv 5.0.0 이 **OpenEXR 없이 빌드**돼 있다(`cv2.getBuildInformation()`: `OpenEXR: NO`) — 환경변수로는 해결되지 않는다. 설치 없이 우회: 래퍼에서 포크 모듈이 보는 `cv2` 를 프록시로 바꿔 `.exr` 만 bpy(`bpy.data.images.load`)로 읽고 cv2 와 같은 모양(위→아래 행, BGRA, float32)으로 돌려준다. 포크 파일·`load_depth` 로직은 그대로다. 깊이 EXR 은 RGB 세 채널이 같은 값이라(실측) 채널 순서는 결과에 영향이 없다. 설정 전(`--exr on` 이어도 cv2 직접) 실패, 설정 후(프록시) 성공·10회 읽기 확인.
+
+## 7. 실행 정보
+
+- 자산: moto-b, ai-ar-v3 `19ed91f` `assets/moto-b/parent` 376청크 → `reference/prepare_moto_b.py` 로 정규화 GLB(중심 (−0.0010, 0.0010, −0.0002), 배율 1.00733 → 150뷰 렌더의 정규화는 사실상 항등). mask.glb = 마스크 셀 정육면체 합집합의 노출면(닫힌 표면). 정규화 후 다시 셀화하면 476 / 1,386 / 2,310 셀 그대로.
+- 마스크 지문(셀, `deltacontract.mask_fingerprint`, 파일 meta 와 일치 확인): rider-head `9e237b53adf1…`, rear-wheel `28b22e0004e6…`, rear-wheel-full `88270814e860…`. 원저자 경로 `voxels_delete.ply` 는 rider-head 860 셀(마스크 476 전부 포함 + 384), volume 필터(임계 0.1)의 팽창.
+- 조건 시점: 두 마스크 모두 **view 0**(방위 0°, 측면). 근거 썸네일 `img/00-moto-b-rider-head-views.png`, `img/00-moto-b-rear-wheel-views.png` — view 0 이 편집 부위가 가려지지 않고 마스크 면적이 가장 크다(10,712 / 32,189 px).
+- 인페인팅 프롬프트(트랙 A 표와 같은 문구), 시드 0: rider-head "a red and gold Iron Man helmet as the rider's head", rear-wheel "a thick chunky knobby off-road rear tire". 조건 이미지 `img/00-moto-b-conditions.png`. 3회 모두 `2d_edit.png` 비트 동일(rider-head `fd3a0359…`, rear-wheel `3c0d4782…`). rear-wheel 은 육안상 변화가 작다(효능 약함, 미검증).
+- FLUX 가중치: HF 캐시 `models--black-forest-labs--FLUX.1-Fill-dev`, snapshot `358293da0354175698b67ec8299acf928313a78a` — **원본 저장소**. 파일별 sha256 `env/a5000-flux-fill-dev-sha256.txt` (transformer 3샤드 `4cef6b16…`/`cd99fdd4…`/`ed878852…`, T5 2샤드 `ec87bffd…`/`a5640855…`, ae `afc8e282…`).
+- 실행 횟수: 마스크당 3회 + 프로파일 1회. 조건 렌더 마스크당 3회, 인페인팅 마스크당 3회.
+- 계측 JSON sha256: `summary.json d6a7972a…`, `equivalence_split.json 7c15fdd4…`, `a6/check.json 753e7b14…`; 회차 JSON rider-head r1 `3b9fb9c3…` r2 `e7448e72…` r3 `f0dfb90f…` profile `b9aece61…`, rear-wheel r1 `60357a38…` r2 `3b226b74…` r3 `b1a7cdc9…`.
+
+### A-5b 조건 렌더 실행 간 차이 (같은 입력 3회, 실측)
+
+| 시점 | RGB max (0–255) | RGB 다른 픽셀 (쌍별 최대) | 마스크 다른 픽셀 |
+|---|---|---|---|
+| 0 (사용 시점) | 1 | 12 | 0 |
+| 1 | 0 | 0 | 0 |
+| 2 | 0 | 0 | 0 |
+| 3 | 0 | 0 | 0 |
+| 4 | 1 | 9 | 0 |
+
+두 마스크(rider-head, rear-wheel) 모두 같은 표. 쌍 1–2 는 전 시점 RGB 비트 동일, 1–3·2–3 에서 시점 0·4 에 ±1 이 9–12 픽셀. **판정 제안(R10a):** 2D 마스크는 비트 비교, RGB 는 채널 차 ≤ 1 허용. 허용치가 작아 시드 사본은 필요 없다고 본다(판정은 chief).
+
+### A-6 moto-b feats SLat 확인 (실측, 판정은 chief)
+
+| 단계 | 결과 |
+|---|---|
+| 1 파일 | `v3-moto-b/v1/slat.safetensors` sha256 `b8b1f91c546b3ced690523f3ff4e9da4e9a6b80e5d36a69e9434dfa9d0a8f0ee`, 439,848 B. coords int32 (9150,4)(batch 열 0 뿐), feats float32 (9150,8). 메타: contract_version 3, slat_channels 8, voxel_res 64, coord_order canonical, slat_space denormalized, seed 42, norm_mean/norm_std(8개) |
+| 2 coords | `moto-b.slat_coords.npy`(spec `j-00ae8c4f3513`) 와 정렬 후 **완전 일치** 9150/9150 |
+| 3 디코딩 2회 | 면 359,220 / 정점 179,596 두 회 같음. 정점 좌표는 비트 동일 아님(fp16 디코더). bbox (−0.198, −0.496, −0.372)–(0.196, 0.497, 0.374) |
+| 4 `.cbin` 비교 | 376청크, 면 359,220 = 디코더 359,220. 중복 제거 정점 179,596 = 디코더 179,596. Chamfer(중복 제거 정점 집합, cKDTree, 정규화 공간) 양방향 평균 4.5e-9, 최대 1.35e-6 |
+| 5 chief 기준값 | 청크 376, 면 359,220, 청크별 정점 합 207,537, 중복 제거 179,596, voxel_count 합 9,149 — **전부 같음** |
+
+W34 참고 측정(7)은 chief 판정 후 실행한다(명령 준비됨: `run_reference.py --mode w34 --slat …`).
+
+### A-7 고객사 검증 스크립트 (실측)
+
+1. **원본 그대로 (CPU, A5000, `sha256sum -c` OK, 인자 `build/reference-v2`·`third_party/ai-ar-v3`)**
+
+| 스크립트 | A5000 | chief 사전 실행 |
+|---|---|---|
+| v_stage1_cache | 원본 캐시 419.56 MB · cross 비트 동일 True · A 49.76 MB(11.9%) 비트 동일 True · B 24.88 MB(5.9%) 비트 동일 True · 음성대조 5.007e-06 / 4.130e-02 · 23.1 s | 419.56 MB · True · 11.9% · 5.9% · 5.282e-06 / 4.130e-02 |
+| v_stage2_misc | 매칭 비트 동일 True · 원본 94 ms → 인덱스 17.1 ms + 적용 7.53 ms · argmax 0번 덮어씀 True · 개선판 오류 중단 · CFG max\|Δ\| 1.61e-06 / 1.67e-06, 비트 동일 False | True · 127 ms → 0.9 ms · True · 중단 · 1.42e-06, False |
+| v_cbin_direct | 968 청크 · 9.4 MB · partition+encode 2.15 / 2.06 s · changed 68/972 · removed 12 · 단위 법선 100% | 968 · 9.4 MB · 1.98 / 1.64 s · 68/972 · 12 · 100% |
+
+불리언·크기·청크 수는 모두 같다. 음성대조 1·CFG 의 작은 수치 차이는 torch 버전 차이(2.4.0 vs 2.14.1)로 본다(추론). 시간은 이 실행 동안 다른 CPU 작업(S-4 복셀화)이 같이 돌아 참고값이다.
+
+2. **GPU fp16 사본** (`tests/customer/gpu/`, diff 부록 A) — 기본 규모
+
+| 스크립트 | 결과 |
+|---|---|
+| v_stage1_cache | 원본 캐시 209.78 MB(fp16) · cross 비트 동일 True · A 24.88 MB 비트 동일 True · B 12.44 MB 비트 동일 True · 음성대조 1.163e-02 / 5.508e-02 · 2.7 / 2.0 / 1.8 s |
+| v_stage2_misc | 매칭 비트 동일 True · 원본 29 ms → 인덱스 42.5 ms + 적용 0.13 ms · argmax 0번 덮어씀 True · 개선판 중단 · CFG(fp16) max\|Δ\| 3.34e-03 / 2.62e-03, 비트 동일 False |
+| v_cbin_direct | CPU 경로 — 1의 시간이 A5000 CPU 실행 시간 |
+
+3. **실제 규모 1회** — (결과는 실행 후 기입)
+
+### A-8 테스트 (실측, `venv-tests`)
+
+- conformance **53 passed, 0 failed, 0 skipped**
+- ai-ar-v3 서버 테스트 **360 passed, 12 skipped** (20.2 s). 실행 후 submodule 작업 트리 변경 없음.
+
+## A-2 현행 코드 보관 — 보류 (chief 2026-10-22)
+
+다른 로컬 저장소 코드를 이 저장소로 복사하는 단계가 권한 검사에 막혀 보류했다. 대상과 비밀값 스캔 결과만 적는다(실측, 읽기 전용 스캔).
+
+| 대상 | 파일 |
+|---|---|
+| `legacy/a5000/vh-track/` | ai-ar-v3 `tools/` 미추적 19개: chunk_compare.py, debugview_standalone.py, edit_slat_reuse.py, exr_mask_postprocess.py, gen_asset.py, inpaint_offload.py, make_mask_glb.py, make_thumb.py, repeat_bench.py, repeat_bench_analyze.py, repeat_bench_run.sh, restart_edit_service.sh, run_voxhammer_checked.sh, slat_capture.py, start_debugview.sh, w42_region_eval.py, w42_run.sh, w43_panels.py, w43_run.sh + `<VH_CUR>/env.sh` (00a 의 15개는 `head` 로 잘린 목록이었다) |
+| `legacy/a5000/edit_service/` | ai-ar-prototype `server/api/*.py`(build, jobs, main, ops, routes, store, `__init__`) + `api/tests/*.py`, `server/lab/*.py`(api, cli, debug, pipeline, regions, render, representation, seam, store, vhmask, view), `server/repaint/masked_sampler.py`. vendor TRELLIS(`vendor/trellis1`)는 대상 아님 |
+
+스캔: 실제 비밀 값 없음. 키는 환경변수에서만 읽는다(`routes.py:29` `TRELLIS_API_KEY` 기본값 `"dev-key"`, `restart_edit_service.sh:9` 미설정 시 중단). IP 리터럴 없음(0.0.0.0·127.0.0.1 제외). 홈 경로 33행, 포트 기본값(8081·8082·8083) 몇 곳.
+
+## A-9 효과 재산정 (제안값, 확정은 고객사)
+
+분모 두 가지: (가) 원저자 경로 편집 1회 실측 ≈ 388 s(구간 1–8 + 자산 등록), (나) W34 경로 추정 ≈ 226.5 s = (가) − 자산 등록 119.7 − mask.glb 복셀화 41.8 (추론; W34 실측은 A-6 판정 후).
+
+| 순서 | ID | 줄이는 구간 | 대상 시간 (s) | (가) 대비 | (나) 대비 | 근거 |
+|---|---|---|---|---|---|---|
+| 1 | E2a 스텝 축소 | 4·6 샘플링 | 62.3 | 16% | 28% | 실측 구간, 감소율은 스텝 비율에 비례(추론) |
+| 2 | R4 mesh만 → `.cbin` | 7 (to_glb 15.6, gs 디코딩 0.0) | 16.6 | 4% | 7% | 실측 |
+| 3 | R10a 조건 렌더 1시점·depth | 1 | 26.1 | 7% | 12% | 실측, 5시점→1시점이면 대부분 제거(추론) |
+| 4 | R8a 워커 상주 | 8 | 31.9 | 8% | 14% | 실측. 현행 VoxHammer 경로는 상주하지 않음(효과 0 아님) |
+| 5 | R9 3090 INT4 FLUX 상주 | 2 | 88.0 | 23% | 39% | 실측 |
+| 6 | E4 인페인팅 해상도·스텝 | 2 | 88.0 (R9 와 겹침) | – | – | 실측 |
+| 7 | R8b rembg 세션 재사용 | 3 (preprocess 1.4) | <1.4 | <0.4% | <0.6% | 실측 |
+| 8 | R12 cross K/V 중복 제거 | 4·6 의 DtoH 일부 | ≤ 18.8 장치(ms 합 기준 DtoH 14.5+4.3 s) | ≤5% | ≤8% | 프로파일 실측, cross 몫은 미분리(추론) |
+| 9 | R7g 매칭 검사 | – | 0 | 0 | 0 | 기능 |
+| 10 | R5-1+R5-3 보존 토큰만·GPU 상주 | 4 의 DtoH 14.5 + HtoD 4.8 | ≈ 19 | 5% | 8% | 프로파일 실측(장치 시간), 캐시 47.3 GB |
+| 11 | E3 Stage 1 inversion 선계산 | 4 inv | 27.1 | 7% | 12% | 실측 |
+| 12 | R7 매칭 인덱스 1회 | 6 den 매칭 eq/all/argmax 1.8 + inv 루프 | ≈ 2 | <1% | <1% | 프로파일 실측 |
+| 13 | E1 Stage 1 CFG 배치 | 4 forward 중 CFG 구간 | ≤ 10 | ≤3% | ≤4% | 추론 |
+| 14 | E2b Euler | 4·6 forward 의 절반 | ≈ 25 | 6% | 11% | 추론(2차→1차, NFE ½) |
+| 15 | R10 렌더러 교체 | 1 (+ 등록 150뷰 96 s, 원저자 경로만) | 26.1 | 7% | 12% | 실측 |
+| 16 | R5-2 | 메모리 위주 | – | – | – | – |
+| 17 | R6 | 메모리 위주 | – | – | – | – |
+
+2·3순위 진입 조건(10%): (나) 기준이면 11(E3) 12%·14(E2b) 11%·15(R10) 12% 가 10% 이상, 10(R5) 8%·12(R7)·13(E1) 은 미만. (가) 기준이면 2·3순위 전부 10% 미만(제안).
+
+## 8. 남은 문제·요청
+
+- A-6 판정(chief) → 통과 시 W34 참고 측정 마스크 2건 × 3회.
+- 원저자 경로의 Stage 2 회차 간 차이는 등록 단계(렌더 잡음)가 지배한다. 이후 항목의 동등성 비교는 입력 SLat 고정(W34) 또는 `--reuse_render` 조건으로 하는 것을 제안.
+- opencv 5.0.0(OpenEXR 없음) 우회는 래퍼 안에 있다. env 를 바꾸지 않았다.
+- 00a 에서 "15개"로 적은 미추적 스크립트는 19개였다(00a 보고의 `head -15` 절단).
+- 발견한 개선 기회(구현 안 함): `sample_slat_inverse` 의 좌표별 파이썬 루프(8,915회 eq·all), Stage 1 inversion DtoH 14.5 s, to_glb 15.6 s(구간 7 의 94%).
