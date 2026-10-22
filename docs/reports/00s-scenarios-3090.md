@@ -36,7 +36,8 @@
 |---|---|---|---|---|---|---|
 | moto | a man riding a black motorcycle | A-M1, A-M2 | 42 | `ba83d6d489ea414ac5c0d77c34257e8240e69297f610478c895579b37ade8119` | `1909de04ad14ec999d8541352a700198dc5c1d960b717b549664b1c507c8c64f` | 21.7 % · x 130–958, y 181–854 |
 | snowman | a snowman with a carrot nose, stick arms and a red scarf | A-S1, A-S2 | 42 | `cb00015b6ed4521d9fd3bd330e5fb6fb38505ce0ba012c2266e578d1e7ca89f6` | `18060f3b0950517a5a51c98df3406ce24087ad3facfcc48d7b3a1000a6dabd34` | 20.7 % · x 221–816, y 213–961 |
-| chair | a wooden armchair with armrests | A-C1, A-C2 | 42 | `c9c90c65a7f44fc5df226371c018c34b2bbd6c7083a055747a96d3d4a2ddbab8` | `129c302d82cc11d36e10197d08a7669ef97717d9d2024844d701153fcdbfc433` | 14.6 % · x 237–781, y 168–935 |
+| chair | a wooden armchair with armrests | A-C1, A-C2 | **43** | `75b52e27d60fbe6a16f68cee1d273e46910f95bdd9d50fa53f969f24dbdef017` | `c967a054b08e338c921afa39effb2e9ec24cfb893cf01588d64a7c61cdd018fe` | 13.0 % · x 237–794, y 246–968 |
+| ~~chair~~ (기각) | 〃 | – | 42 | `c9c90c65a7f44fc5df226371c018c34b2bbd6c7083a055747a96d3d4a2ddbab8` | `129c302d82cc11d36e10197d08a7669ef97717d9d2024844d701153fcdbfc433` | 14.6 % · x 237–781, y 168–935 |
 
 - 재현성: moto 의 두 파일 sha256 은 00-kickoff B-3 의 3회 출력과 같다. 같은 프롬프트·시드로 4회 생성해 4회 모두 바이트가 같았다는 뜻이다. (실측)
 - 전경 비율은 알파 > 127 인 화소의 비율이다. 세 자산 모두 프레임 가장자리에 닿지 않는다(최소 여백 63 px, snowman 아래쪽).
@@ -47,11 +48,24 @@
 |---|---|---|---|---|
 | moto | 헬멧 쓴 라이더 머리, 앞·뒷바퀴, 차체 모두 있음 | **측면**(3/4 아님) | 깨끗함 | subject 일치. 시드 유지 |
 | snowman | 당근 코, 막대 팔 2개, 빨간 목도리, 눈덩이 2단, 머리 위 빈 공간 있음 | **정면**(3/4 아님) | 깨끗함. 바닥의 눈 부스러기는 제거됨 | subject 일치. 시드 유지 |
-| chair | 등받이, 양쪽 팔걸이, 좌판, 다리 4개 | 3/4 | 깨끗함 | subject 일치. 시드 유지 |
+| chair seed 42 | 등받이(위 가로대 + **세로 살 3개**), 양쪽 팔걸이, 좌판, 다리 4개 | 3/4 | 깨끗함 | subject 일치. 그러나 A-C1 효능 문제로 기각(아래) |
+| chair seed 43 | 등받이(**살 없는 곡면 판 1장**, 아래는 비어 있음), 양쪽 팔걸이, 좌판, 다리 4개 | 3/4 | 깨끗함 | subject 일치. **채택** |
 
-S-1 규칙("subject 와 다르게 나오면, 예컨대 부품이 빠지면 시드만 바꿔 다시")에 해당하는 자산이 없다. 그래서 **세 자산 모두 seed 42 를 그대로 썼고 다시 만들지 않았다.**
+S-1 규칙("subject 와 다르게 나오면, 예컨대 부품이 빠지면 시드만 바꿔 다시")에 해당하는 자산은 없다. moto·snowman 은 시점이 3/4 가 아니지만 chief 지시(2026-10-22)에 따라 seed 42 를 유지했다.
+
+chair 는 chief 지시(2026-10-22, PR #4)에 따라 다시 골랐다.
+- 규칙: seed 43 부터 순서대로 최대 5개를 만들고, 등받이가 판이거나 가로 살인 첫 시드를 쓴다.
+- seed 43 이 첫 생성에서 조건을 만족했다. 그래서 **seed 43 을 채택했고 44–47 은 만들지 않았다.**
+- 프롬프트는 바꾸지 않았다.
+- seed 42 기록은 `scenarios/track_a_inputs.json` 의 `rejected.chair` 에 남겼다. (실측·육안)
 
 ## 6. 예상과의 차이와 확인 요청 (chief)
+
+> 1·2·3 은 chief 가 결정했다(2026-10-22, PR #4 댓글).
+> 1: 시점은 그대로 둔다.
+> 2: chair 는 seed 43 으로 바꿨다(5절).
+> 3: `xfer/track-a-inputs` 브랜치로 git 전달한다.
+> 아래는 처음 제출할 때의 기록이다.
 
 1. **"3/4 view" 를 따르지 않은 자산이 2개다.** moto 는 측면, snowman 은 정면이다.
    - S-1 규칙상 시점 불일치는 재생성 사유가 아니라고 보고 시드를 유지했다.
@@ -67,5 +81,5 @@ S-1 규칙("subject 와 다르게 나오면, 예컨대 부품이 빠지면 시�
 
 ## 7. 실행 정보
 
-- 실행 횟수: 자산당 1회(seed 42). moto 는 같은 설정으로 B-3 에서 3회 더 실행했다.
-- 산출 위치: `ASSETS_DIR/track_a/{moto,snowman,chair}/seed42/{image_rgb.png,input.png,params.json}` (git 제외). params 는 `scenarios/track_a_inputs.json` 에 그대로 옮겼다.
+- 실행 횟수: moto·snowman 은 seed 42 로 1회, chair 는 seed 42 와 43 으로 1회씩. moto 는 같은 설정으로 B-3 에서 3회 더 실행했다.
+- 산출 위치: `ASSETS_DIR/track_a/<asset>/seed<N>/{image_rgb.png,input.png,params.json}`(채택본: moto·snowman seed42, chair seed43) (git 제외). params 는 `scenarios/track_a_inputs.json` 에 그대로 옮겼다.

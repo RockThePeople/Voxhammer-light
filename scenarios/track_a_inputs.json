@@ -115,7 +115,7 @@
     "A-C1",
     "A-C2"
    ],
-   "created": "2026-10-22T12:24:15+09:00",
+   "created": "2026-10-22T12:45:47+09:00",
    "t2i": {
     "model": "Tongyi-MAI/Z-Image-Turbo",
     "width": 1024,
@@ -123,7 +123,7 @@
     "num_inference_steps": 9,
     "guidance_scale": 0.0,
     "dtype": "bfloat16",
-    "seed": 42,
+    "seed": 43,
     "generator": "cuda",
     "worker": "zimage_gen.py",
     "worker_sha256": "94fc5a1e4d7eb9b64c99607bd426b15b2d5ee602dfe77ddca0502d43a5ee7629"
@@ -156,10 +156,23 @@
    },
    "gpu": "NVIDIA GeForce RTX 3090, 610.43.03",
    "files": {
-    "image_rgb.png": "c9c90c65a7f44fc5df226371c018c34b2bbd6c7083a055747a96d3d4a2ddbab8",
-    "input.png": "129c302d82cc11d36e10197d08a7669ef97717d9d2024844d701153fcdbfc433"
+    "image_rgb.png": "75b52e27d60fbe6a16f68cee1d273e46910f95bdd9d50fa53f969f24dbdef017",
+    "input.png": "c967a054b08e338c921afa39effb2e9ec24cfb893cf01588d64a7c61cdd018fe"
    },
-   "note": ""
+   "note": "seed 42 등받이에 세로 살 3개 → A-C1(\"vertical wooden slats\") 효능이 안 보일 수 있어 chief 지시(2026-10-22)로 seed 43부터 순서대로 탐색. seed 43 등받이가 살 없는 판 → 첫 해당 시드로 채택. 44–47 은 만들지 않음."
   }
+ },
+ "rejected": {
+  "chair": [
+   {
+    "seed": 42,
+    "reason": "등받이에 세로 살(위 가로대 + 세로 살 3개) — A-C1 효능 판정 곤란",
+    "files": {
+     "image_rgb.png": "c9c90c65a7f44fc5df226371c018c34b2bbd6c7083a055747a96d3d4a2ddbab8",
+     "input.png": "129c302d82cc11d36e10197d08a7669ef97717d9d2024844d701153fcdbfc433"
+    },
+    "created": "2026-10-22T12:24:15+09:00"
+   }
+  ]
  }
 }
