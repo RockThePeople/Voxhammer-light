@@ -45,6 +45,14 @@ def tsha(t):
     return hashlib.sha256(t.view(torch.uint8).numpy().tobytes()).hexdigest()
 
 
+class _StopBeforeDecode(Exception):
+    pass
+
+
+def _stop(*a, **k):
+    raise _StopBeforeDecode()
+
+
 def run_fork(pipe, req_paths, seed):
     os.chdir(em.TRELLIS_ROOT)
     import voxhammer.edit_pipeline as ep
@@ -76,11 +84,12 @@ def run_fork(pipe, req_paths, seed):
         cap["coords_tgt"] = coords_tgt.detach().cpu()
         out = orig["sample_slat_denoise"](pipeline, cond_tgt, coords_tgt, *a, **k)
         cap["slat_tgt"] = (out.coords.detach().cpu(), out.feats.detach().cpu())
+        cap["counts"] = None
         return out
 
     ep.sample_sparse_structure_inverse, ep.sample_sparse_structure_denoise = w_s1i, w_s1d
     ep.sample_slat_inverse, ep.sample_slat_denoise = w_s2i, w_s2d
-    pipe.decode_slat = lambda *a, **k: (_ for _ in ()).throw(StopIteration)  # 디코딩 전에 멈춘다
+    pipe.decode_slat = _stop  # 디코딩 전에 멈춘다
     torch.manual_seed(seed)
     cap["_seed_state"] = torch.random.get_rng_state()
     cells = np.asarray(json.loads(Path(req_paths["mask"]).read_text())["mask"]["voxels"])
@@ -88,7 +97,7 @@ def run_fork(pipe, req_paths, seed):
         with torch.no_grad():
             ep.run_edit(pipe, render_dir=None, output_path="/dev/null", image_dir=req_paths["images"], is_text=False,
                         source_prompt="", target_prompt="", slat_path=req_paths["slat"], mask_cells=cells)
-    except StopIteration:
+    except _StopBeforeDecode:
         pass
     finally:
         del pipe.decode_slat
@@ -163,6 +172,7 @@ if __name__ == "__main__":
     ap.add_argument("--image_dir", required=True)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--fork_twice", action="store_true", help="대조: 포크를 두 번 돌려 포크–포크 다이제스트를 비교")
     a = ap.parse_args()
     paths = {"slat": str(Path(a.slat).resolve()), "mask": str(Path(a.mask_json).resolve()),
              "images": str(Path(a.image_dir).resolve())}
@@ -176,7 +186,8 @@ if __name__ == "__main__":
     const["attention"] = {"dense": ta.BACKEND, "sparse": ts.ATTN}
     f = run_fork(pipe, paths, a.seed)
     gc.collect()
-    p = run_port(pipe, paths, a.seed)
+    p = run_fork(pipe, paths, a.seed) if a.fork_twice else run_port(pipe, paths, a.seed)
+    p.setdefault('counts', None)
     from safetensors import safe_open
     with safe_open(paths["slat"], "np") as sf:
         src = {tuple(x) for x in sf.get_tensor("coords")[:, 1:].tolist()}
