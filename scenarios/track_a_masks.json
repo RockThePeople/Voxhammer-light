@@ -49,27 +49,27 @@
   },
   "A-S1": {
     "asset_id": "track_a/snowman",
-    "part": "머리 윗부분 + 위 빈 공간",
-    "n_cells": 10080,
-    "mask_fingerprint": "fd61aa8cef411c1bdddd672123dff09f462e22d9e555e454fba42e4dc3190378",
+    "part": "오른팔 옆 빈 공간(바닥~팔 높이, 손 끝 포함)",
+    "n_cells": 9360,
+    "mask_fingerprint": "5bb923f6681316263da1f20eb4d6e38c4abcc361109105731c619913f61e9f71",
     "mask_boxes": [
       [
         [
-          18,
-          18,
-          52
+          49,
+          25,
+          0
         ],
         [
-          45,
-          47,
-          63
+          63,
+          36,
+          51
         ]
       ]
     ],
-    "part_occupied_cells": 1142,
-    "occupied_cells_in_mask": 1375,
+    "part_occupied_cells": 39,
+    "occupied_cells_in_mask": 234,
     "asset_occupied_cells": 10628,
-    "occupied_ratio": 0.1294
+    "occupied_ratio": 0.022
   },
   "A-S2": {
     "asset_id": "track_a/snowman",
