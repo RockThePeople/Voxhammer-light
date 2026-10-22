@@ -34,6 +34,12 @@
 - 배경 제거 BiRefNet(기존 생성 경로). 편집 경로의 BiRefNet 제외(5장)와는 별개다.
 - 산출: 자산별 `input.png` + 생성 파라미터 JSON(모델, 시드, 스텝, 프롬프트 전문, 환경 버전). 이미지는 git 에 넣지 않고 `ASSETS_DIR` 에 두며 sha256 만 커밋한다.
 - 자산 하나가 subject 와 다르게 나오면(부품 누락 등) 시드만 바꿔 다시 만들고, 쓴 시드와 이유를 기록한다.
+- 시점이 3/4 가 아니어도(moto 측면, snowman 정면) 재생성하지 않는다(chief 2026-10-22).
+- chair: 등받이에 이미 세로 살이 있으면 A-C1("vertical wooden slats") 효능이 안 보인다. **seed 43 부터 순서대로 최대 5개**를 더 만들어, 등받이가 판(살 없음)이거나 가로 살인 첫 시드를 쓴다. 없으면 seed 42 를 유지하고 보고서에 적는다. 프롬프트는 바꾸지 않는다.
+
+### 3090 → A5000 이미지 전달 (S-2 입력, chief 2026-10-22)
+- 지금 바로 되는 경로: git. 3090 이 `xfer/track-a-inputs` 브랜치에 `scenarios/inputs/track_a/<asset>/input.png`(+`image_rgb.png`) 만 커밋해 push 하고, A5000 이 그 브랜치를 fetch 해 `ASSETS_DIR` 로 복사한 뒤 sha256 을 `scenarios/track_a_inputs.json` 과 대조한다. 이 브랜치는 main 에 병합하지 않는다.
+- 직접 전송(scp/rsync)은 3090 → A5000 SSH 가 열리면 그쪽으로 바꾼다. 연결 정보는 각 장비 `.env` 에만 둔다.
 
 ## S-2 트랙 A 3D 생성과 동결 (a5000)
 

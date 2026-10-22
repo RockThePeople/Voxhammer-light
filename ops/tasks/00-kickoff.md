@@ -35,13 +35,15 @@
 환경 기록·pip freeze 는 00a 에서 끝났다.
 
 ### A-2 현행 코드 보관 (요구사항서 2장 "코드 보관")
+> **2026-10-22 chief: A-2 는 보류한다.** 결과에 영향이 없는 보관 작업이고, 다른 로컬 저장소 코드를 복사하는 단계가 권한 검사에 막혔다. 보관 대상 목록과 비밀값 스캔 결과(실제 비밀 없음, 홈 경로 33행)만 보고서에 적고 다음으로 넘어간다. 보관은 고객사가 요청하면 그때 한다.
+
 **수정 없이** 복사하고, 비밀 정보만 자리표시자로 바꾼다. 바꾼 위치는 `legacy/a5000/REDACTIONS.md` 에 적는다. 가중치·데이터·로그는 넣지 않는다.
 - `legacy/a5000/vh-track/`: `ai-ar-v3/tools` 아래 A5000 전용 미추적 스크립트 전부(00a 의 15개: `run_voxhammer_checked.sh`, `edit_slat_reuse.py`, `repeat_bench.py`, `slat_capture.py`, `inpaint_offload.py`, `restart_edit_service.sh` 등) + `<VH_CUR>/env.sh`.
 - `legacy/a5000/edit_service/`: `ai-ar-prototype/server/api/` 와 그것이 import 하는 `lab/pipeline.py` 등 코드 파일만. VoxHammer 경로가 아니므로 기준선에는 쓰지 않고 보관만 한다.
 - `legacy/a5000/README.md`: 00a 보고의 A4–A8 을 가리키고, 각 파일이 무엇을 하는지 한 줄씩. 변경 청크 결정 방식(R11, 점유 비교인지 해시인지)을 코드 근거(파일:행)로 추가로 적는다.
 
 ### A-3 R2 SLat 포획 (기본 동작)
-`run_edit` 는 `slat_tgt` 를 저장하지 않는다. 현행 `slat_capture.capture_slat`(`decode_slat` 호출을 가로채 저장)을 `reference/slat_capture.py` 로 옮겨 쓴다(출처 주석 `# origin: ai-ar-v3/tools/slat_capture.py (A5000 local)`). 형식: safetensors, `coords` int32 (N,4), `feats` float32 (N,8), 메타 `slat_space=denormalized`. 포크 함수는 고치지 않는다.
+`run_edit` 는 `slat_tgt` 를 저장하지 않는다. `reference/slat_capture.py` 를 **새로 작성**한다(현행 `slat_capture.py` 를 복사하지 않는다. 동작은 같게: `decode_slat` 호출을 가로채 입력 SLat 을 저장). 현행 파일은 읽어서 형식만 맞춘다. 형식: safetensors, `coords` int32 (N,4), `feats` float32 (N,8), 메타 `slat_space=denormalized`. 포크 함수는 고치지 않는다.
 
 ### A-4 기준선 계측 래퍼 `reference/`
 `reference/run_reference.py` 를 만든다. 포크 코드는 고치지 않는다.
