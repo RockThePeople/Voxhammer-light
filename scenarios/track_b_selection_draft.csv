@@ -1,0 +1,9 @@
+dataset,object,prompt_id,source_prompt,prompt,region_cells,source_cells,overlap_cells,occ_share,size,edit_type_guess
+GSO,RJ_Rabbit_Easter_Basket_Blue,3,A blue basket.,A basket with a watermelon.,21884,13590,1150,0.08462104488594555,소,교체
+PartObjaverse-Tiny,0c4e4a0b2a374553ae762bb33e8dd2d0,1,A blue ice cream.,A blue ice cream with knife and fork on it.,9964,23222,1931,0.08315390577900267,소,교체
+GSO,SpiderMan_Titan_Hero_12Inch_Action_Figure_5Hnn4mtkFsP,1,Spider-Man.,Spider-Man with Iron Man's helmet.,1518,3799,326,0.08581205580415899,소,교체
+PartObjaverse-Tiny,dcf35ae14df947a9a700b8bcff8db57f,1,A fan.,A fan with a black metal base.,16727,10719,2727,0.25440806045340053,중,교체
+GSO,Squirtin_Barnyard_Friends_4pk,2,"A sheep, a cow, a pig, and a chicken.","A sheep, a cow, a red cow, and a chicken.",17992,6841,1747,0.255372021634264,중,교체
+PartObjaverse-Tiny,97582e1d16f6471bac014081535c26ad,1,A queen.,A queen with a cuirass.,7432,8216,2133,0.25961538461538464,중,교체
+GSO,3D_Dollhouse_TablePurple,1,A purple table.,A porcelain dish on wooden supports.,64840,11345,6337,0.5585720581754077,대,교체
+PartObjaverse-Tiny,5fb5b1704b464f5c94b667f1b630bb39,1,A building.,A merry-go-round.,20092,8957,4995,0.5576643965613487,대,교체
