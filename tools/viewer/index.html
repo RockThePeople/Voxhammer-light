@@ -91,7 +91,9 @@ function render() {
       if (!e.isIntersecting) return;
       io.unobserve(e.target);
       const it = e.target._item;
-      queue.push({ el: e.target.querySelector('.thumb'), it });
+      const el = e.target.querySelector('.thumb');
+      if (it.thumb_file || it.thumb_cached) { setImageThumb(el, it); return; }
+      queue.push({ el, it });
       pump();
     });
   }, { rootMargin: '300px' });
@@ -110,30 +112,43 @@ function render() {
   }
 }
 
-// 썸네일: 폴더 이미지 또는 캐시가 있으면 그대로, 없으면 브라우저에서 한 장씩 렌더해 서버 캐시에 올린다.
+// 썸네일: 폴더 이미지·캐시가 있으면 바로 <img>(대기열 없음).
+// 없으면 GLB 렌더 대기열에 넣어 한 번에 하나씩 브라우저에서 렌더하고 서버 캐시에 올린다.
+// 한 건이 RENDER_TIMEOUT 안에 안 끝나면 실패로 표시하고 다음으로 넘어간다.
+const RENDER_TIMEOUT = 20000;
+
+function setImageThumb(el, it) {
+  const img = new Image();
+  img.alt = it.title;
+  img.loading = 'lazy';
+  img.onerror = () => { el.textContent = '이미지 없음'; };
+  img.src = `/thumb?id=${encodeURIComponent(it.id)}&k=${it.thumb_key}`;
+  el.replaceChildren(img);
+}
+
+function withTimeout(p, ms) {
+  return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`timeout ${ms} ms`)), ms))]);
+}
+
 async function pump() {
   if (busy) return;
   busy = true;
   while (queue.length) {
     const { el, it } = queue.shift();
     if (!el.isConnected) continue;
-    const img = new Image();
-    img.alt = it.title;
-    if (it.thumb_file || it.thumb_cached) {
-      img.src = `/thumb?id=${encodeURIComponent(it.id)}&k=${it.thumb_key}`;
-      el.replaceChildren(img);
-      continue;
-    }
     el.textContent = '렌더 중…';
     try {
-      const blob = await renderThumb(fileUrl(it.id, it.models[0]));
-      fetch(`/api/thumb?id=${encodeURIComponent(it.id)}`, { method: 'POST', body: blob }).catch(() => {});
+      const blob = await withTimeout(renderThumb(fileUrl(it.id, it.models[0])), RENDER_TIMEOUT);
+      fetch(`/api/thumb?id=${encodeURIComponent(it.id)}`, { method: 'POST', body: blob })
+        .catch((e) => console.warn('thumb upload failed', it.id, e));
       it.thumb_cached = true;
+      const img = new Image();
+      img.alt = it.title;
       img.src = URL.createObjectURL(blob);
       el.replaceChildren(img);
     } catch (err) {
-      el.textContent = '썸네일 실패';
-      console.error(it.id, err);
+      el.textContent = '썸네일 실패 (클릭하면 3D 보기)';
+      console.error('thumb', it.id, err);
     }
   }
   busy = false;

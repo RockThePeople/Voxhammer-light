@@ -149,7 +149,7 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "vhl-viewer/1"
 
     def log_message(self, fmt, *args):  # 접근 로그는 짧게
-        sys.stderr.write("%s %s\n" % (self.command, self.path[:160]))
+        sys.stderr.write("%s %s %s\n" % (self.command, self.path[:160], args[1] if len(args) > 1 else ""))
 
     def _send(self, code: int, body: bytes, ctype: str, extra: dict | None = None) -> None:
         self.send_response(code)
@@ -265,7 +265,7 @@ def main() -> int:
 
     Handler.catalog = Catalog(roots, cache)
     n = len(Handler.catalog.items(force=True))
-    print(f"viewer: http://{a.host}:{a.port}/  항목 {n}개, 루트 {[str(r) for r in roots]}, 썸네일 캐시 {cache}")
+    print(f"viewer: http://{a.host}:{a.port}/  항목 {n}개, 루트 {[str(r) for r in roots]}, 썸네일 캐시 {cache}", flush=True)
     ThreadingHTTPServer((a.host, a.port), Handler).serve_forever()
     return 0
 

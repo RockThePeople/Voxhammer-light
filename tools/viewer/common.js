@@ -77,7 +77,9 @@ export async function renderThumb(url, w = 320, h = 240) {
   const cam = new THREE.PerspectiveCamera(35, w / h, 0.01, 100);
   frame(cam, obj, null);
   thumbRenderer.render(scene, cam);
-  const blob = await new Promise((r) => thumbRenderer.domElement.toBlob(r, 'image/png'));
+  // toBlob 은 일부 환경(headless·소프트웨어 WebGL)에서 콜백이 오지 않는다 → toDataURL(동기) 사용.
+  const dataUrl = thumbRenderer.domElement.toDataURL('image/png');
+  const blob = await (await fetch(dataUrl)).blob();
   obj.traverse((o) => {
     if (o.isMesh) {
       o.geometry.dispose();
