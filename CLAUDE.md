@@ -1,7 +1,7 @@
 # CLAUDE.md — Voxhammer-light
 
 VoxHammer(f33cd96 + 기준 패치) 기반 3D 편집 1회의 벽시계 시간을 줄이는 구현 저장소다.
-**요구사항의 유일한 기준은 [ops/REQUIREMENTS.md](ops/REQUIREMENTS.md) 4장이다.**
+**요구사항의 유일한 기준은 [ops/REQUIREMENTS.md](ops/REQUIREMENTS.md) 4장이다.** 고객사 회신으로 정정·확정된 내용은 [ops/REQUIREMENTS-ERRATA.md](ops/REQUIREMENTS-ERRATA.md) 에 있고, 원문과 다르면 정오표가 우선한다.
 
 ## 세션 시작·종료 절차
 
@@ -34,7 +34,7 @@ VoxHammer(f33cd96 + 기준 패치) 기반 3D 편집 1회의 벽시계 시간을 
 ## 기준 구현(포크) 규칙
 
 - `third_party/VoxHammer` 는 f33cd96 고정 submodule 이다. **수정하지 않는다.**
-- 패치 적용본은 `tools/setup_reference.sh` 로 `build/reference/` 에 만든다. 여기도 수정하지 않는다.
+- 패치 적용본은 `REFERENCE_DIR=build/reference-v2 bash tools/setup_reference.sh` 로 `build/reference-v2/` 에 만든다(00a 의 `build/reference` 는 스탬프가 없어 쓰지 않는다). 여기도 수정하지 않는다.
 - 기준 실행에서 `W39_ATTN_MASK` 를 설정하지 않는다 (W39 제외, 요구사항서 5장).
 - 포크에 대해 허용되는 것은 포크 밖에서 호출 시간을 재는 계측 래퍼(`reference/`)뿐이다.
 - `third_party/ai-ar-v3` 는 계약(`contract/`)과 `server/glbbuild.py` 를 읽기 전용으로 쓴다.
@@ -74,7 +74,7 @@ VoxHammer(f33cd96 + 기준 패치) 기반 3D 편집 1회의 벽시계 시간을 
 - 구간 경계마다 `torch.cuda.synchronize()` 후 시간 측정.
 - VRAM: 구간마다 `reset_peak_memory_stats()` → `max_memory_allocated()`. `nvidia-smi` 값은 별도 열.
 - CPU: 프로세스 RSS 피크, 캐시 딕셔너리 텐서 바이트 합 따로.
-- 자산 t1s-snowman, t2s-moto. 마스크 크기 다른 편집 각 2건 이상. 시간은 3회 평균±표준편차.
+- 자산: 0번 시간 기준선은 moto-b(원저자 경로)에 마스크 크기가 다른 편집 2건 이상. 시나리오 동결 뒤에는 트랙 A 6건 + 트랙 B 8건 = 14건이 이후 모든 항목의 비교 기준이다(`ops/tasks/00s-scenarios.md`). t1s-snowman·W41·W42 수치는 비교 기준으로 쓰지 않는다. 시간은 3회 평균±표준편차.
 - 계측 결과는 `runs/` (git 제외)에 JSON 으로 두고, 보고서에는 요약 표와 JSON 의 sha256 을 적는다.
 
 ## 브랜치·PR

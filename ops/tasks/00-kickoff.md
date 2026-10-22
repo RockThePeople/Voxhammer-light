@@ -45,7 +45,7 @@
 
 ### A-4 기준선 계측 래퍼 `reference/`
 `reference/run_reference.py` 를 만든다. 포크 코드는 고치지 않는다.
-- `build/reference/voxhammer/edit_pipeline` 모듈의 모듈 전역 함수(`sample_sparse_structure_inverse`, `sample_sparse_structure_denoise`, `sample_slat_inverse`, `sample_slat_denoise`, `preprocess_image`, `ply_to_ss_mask`, `ply_to_slat_mask` 등)를 **모듈 속성 교체로 감싸** 구간 시간을 잰다. `run_edit` 는 호출 시점에 모듈 전역 이름을 찾으므로 감싼 함수가 쓰인다. 감쌌을 때 실제로 감싼 함수가 호출됐는지 호출 횟수를 로그로 남긴다.
+- `build/reference-v2/voxhammer/edit_pipeline` 모듈의 모듈 전역 함수(`sample_sparse_structure_inverse`, `sample_sparse_structure_denoise`, `sample_slat_inverse`, `sample_slat_denoise`, `preprocess_image`, `ply_to_ss_mask`, `ply_to_slat_mask` 등)를 **모듈 속성 교체로 감싸** 구간 시간을 잰다. `run_edit` 는 호출 시점에 모듈 전역 이름을 찾으므로 감싼 함수가 쓰인다. 감쌌을 때 실제로 감싼 함수가 호출됐는지 호출 횟수를 로그로 남긴다.
 - 구간 경계마다 `torch.cuda.synchronize()`, VRAM 은 구간마다 `reset_peak_memory_stats()` → `max_memory_allocated()`, `nvidia-smi` 값 별도, 프로세스 RSS 피크, 캐시 딕셔너리(`ss_kv`, `slat_kv`, `latent`) 텐서 바이트 합.
 - 구간 4·6 의 내부 분해(forward 연산 / 캐시 저장·적재 / 전송 / 좌표 매칭)는 **1회 실행에 한해** `torch.profiler` 로 잰다: DtoH·HtoD memcpy 합계, `aten::eq`·`aten::all`·`aten::argmax`(매칭) 합계, 나머지. 프로파일 실행은 평균 계산에서 제외한다.
 - 구간 7 은 Gaussian 디코딩, mesh 디코딩, `to_glb`, GLB export, 재청킹을 따로 잰다(`decode_slat` 는 형식별로 분리 호출할 수 없으면 `pipeline.models` 의 디코더 호출을 감싼다).
@@ -55,7 +55,8 @@
 ### A-5 조건 렌더·인페인팅 계측 (구간 1·2, 현행 경로 그대로)
 - 구간 1: 포크 `utils/render_rgb_and_mask.py`(bpy 4.0 모듈 + bpyrenderer, Blender 실행파일 아님)를 래퍼로 감싸 원본 렌더(5시점), 마스크 렌더(5시점), 2D 마스크 후처리를 나눠 잰다. 시점 수·Cycles 샘플 수 기록. 시드는 바꾸지 않는다.
 - 구간 2: 현행 `inpaint_offload.py` 그대로(A5000, bf16, CPU offload, 50스텝, guidance 30, seed 0). FLUX 적재와 인페인팅을 나눠 잰다. **장비 간 전송은 현행 경로에 없으므로 0 으로 적는다**(인페인팅을 3090 으로 옮기는 것은 5번 R9).
-- 쓰는 FLUX.1-Fill-dev 가중치의 **저장소 이름**(HF 캐시 폴더명 `models--<org>--<name>`)과 snapshot, 주요 파일 sha256 을 적는다(원본 `black-forest-labs` 인지 미러인지 확인).
+- 쓰는 FLUX.1-Fill-dev 가중치의 **저장소 이름**(HF 캐시 폴더명 `models--<org>--<name>`)과 snapshot 해시를 적고, snapshot 아래 **모든 파일**(가중치·설정·토크나이저 포함)의 상대 경로와 sha256 을 표로 적는다. 같은 표를 `docs/reports/00-kickoff-a5000.flux-sha256.txt`(`sha256sum` 출력 형식, 경로는 snapshot 기준 상대 경로)로도 커밋한다. 원본 `black-forest-labs` 인지 미러인지 밝힌다.
+- 이 표는 3090 미러(B-4) 사용 여부 판정에 쓴다(고객사 회신 A3, 2026-10-22): **미러는 원본과 파일별 sha256 이 전부 같을 때만 쓴다.** A5000 가중치가 원본이 아니면 그 사실만 적고 멈추지 않는다(판정은 chief).
 - 렌더·인페인팅 스크립트는 고치지 않는다. 시간은 바깥 래퍼에서 잰다.
 
 ### A-5b 조건 렌더 실행 간 차이 (R10a 판정 기준 준비, 고객사 지시 2026-10-19)
@@ -70,7 +71,18 @@ R10a 기준 렌더러는 포크 `utils/render_rgb_and_mask.py` 를 **수정 없�
 
 ### A-6 실행 매트릭스 (요구사항서 6장 최신본 반영)
 - 자산: **moto-b 로 먼저 진행**한다. 요구사항서 6장에 따라 **원저자 경로**(GLB → 150뷰 렌더 → DINOv2 특징 → SLat 인코딩, `slat_path=None`, `inference.py` 와 같은 인자)로 돌리고, 용도는 시간 기준선뿐이다. 품질 지표는 재지 않는다. 150뷰 렌더·특징 추출·인코딩 시간은 구간 8 옆에 "자산 등록" 행으로 따로 적는다.
-- 00a 에서 A5000 자산 저장소에 feats 가 있는 moto-b SLat(`v3-moto-b/v1/slat.safetensors`, 9,150셀, denormalized)이 확인됐다. 출처가 확인되지 않았으므로 **고객사 확인 전에는 쓰지 않는다**. 파일 sha256 과 메타만 보고서에 적는다.
+- **moto-b feats SLat 보조 측정 (고객사 회신 A2, 2026-10-22 허용, 정오표 E1).** 00a 에서 확인된 `v3-moto-b/v1/slat.safetensors`(9,150셀, denormalized)를 W34 경로(SLat 재사용) 보조 측정에 쓴다. 쓰기 전에 아래 확인을 먼저 하고, 통과한 경우에만 보조 측정을 한다.
+  1. 파일 sha256, 크기, safetensors 메타 전체, `coords`·`feats` 의 shape·dtype 을 적는다.
+  2. `coords`(batch 열 제외 (N,3))가 ai-ar-v3 `handoff/lasso/moto-b.slat_coords.npy`(int16 (9150,3), spec 의 `a5000_job_id` j-00ae8c4f3513)와 정렬 후 **완전 일치**하는지 본다. 불일치면 여기서 멈추고 보고한다.
+  3. 현행 `.venv` 에서 TRELLIS mesh 디코더(`slat_decoder_mesh`)로 디코딩한다. `to_glb` 후처리(단순화·텍스처 굽기)는 하지 않고 디코더 출력 메시 그대로 쓴다. 같은 디코딩을 2회 해 면 수·정점 수가 같은지 함께 적는다.
+  4. 비교 대상 = ai-ar-v3 `assets/moto-b/parent/*.cbin` 376청크(`chunkbin.decode`). 비교 항목:
+     - 면 수: 디코더 출력 vs `.cbin` 인덱스 합/3
+     - 중복 제거 정점 수: 디코더 출력 vs `.cbin` 전체 정점. 중복 판정은 계약 양자화(`np.rint(pos * 2**20)`, `chunkbin.py:115`)로 한다.
+     - Chamfer 거리: 두 정점 집합(정규화 공간 [-0.5, 0.5]) 사이 양방향 평균·최대. 계산 코드와 점 수를 적는다.
+  5. chief 기준값(코드확인·실측, ai-ar-v3 `19ed91f`): 청크 376, 면 359,220, 청크별 정점 합 207,537, 중복 제거 정점 179,596, 청크 voxel_count 합 9,149. 이 값은 `manifest.json` 의 청크별 `vertex_count` 와 모두 일치하지만, manifest 상단 `vertex_count_total` 194,608 은 청크 합과 다르고 voxel 합은 coords 9,150 보다 1 작다. 이 두 차이는 판정에 쓰지 않고 보고서에 사실로만 적는다.
+  6. 판정: 2 는 완전 일치가 필수다. 3·4 는 수치를 적고 작업 세션이 합격을 선언하지 않는다. 판정은 chief 가 하고 고객사에 보고한다.
+  7. 통과하면 W34 경로(SLat 입력, 원저자 인코딩 생략)로 moto-b 마스크 2건을 3회씩 잰다. 이 시간은 **참고값**이며 비교 기준이 아니다. 표에는 원저자 경로 기준선과 별도 행으로 둔다.
+  - 통과한 moto-b 는 트랙 A 보조 자산으로 쓸 수 있다. 트랙 A 6건·14건에는 넣지 않는다.
 - moto-b 조건 시점: 마스크마다 편집 부위가 가려지지 않는 시점 1개를 5개 중에서 고르고, 고른 근거로 5시점 렌더 썸네일을 보고서에 붙인다.
 - t1s-snowman 과 W41·W42 수치는 재현할 수 없으므로 비교 기준으로 쓰지 않는다. 0번 단독 검증의 "기존 실측과 같은 자릿수" 는 116–129 s(구간 4–7)와의 자릿수 대조로만 하고, 합격 판정에 쓰지 않는다.
 - 시나리오(00s 트랙 A 6건·트랙 B 8건)가 동결되면 그 14건으로 기준선을 다시 잰다(1번 E2a 전). 이것이 이후 모든 항목의 비교 기준이다.
@@ -89,7 +101,7 @@ R10a 기준 렌더러는 포크 `utils/render_rgb_and_mask.py` 를 **수정 없�
 
 ### A-7 고객사 검증 스크립트
 스크립트 3개는 `tests/customer/` 에 있다(원본, 수정 금지, `SHA256SUMS`). chief 가 CPU 에서 부록 수치를 재현했다(`tests/customer/README.md`).
-1. **원본 그대로 실행.** A5000 에서 `sha256sum -c` 확인 후 원본을 그대로 실행한다(인자: `build/reference`, `third_party/ai-ar-v3`). 결과를 chief 사전 실행 결과와 나란히 적는다.
+1. **원본 그대로 실행.** A5000 에서 `sha256sum -c` 확인 후 원본을 그대로 실행한다(인자: `build/reference-v2`, `third_party/ai-ar-v3`). 결과를 chief 사전 실행 결과와 나란히 적는다.
 2. **GPU fp16 사본.** `tests/customer/gpu/` 에 사본을 만들어 다음만 바꾼다: `torch.Tensor.cuda` 항등 치환 제거, 모델·입력을 `cuda` 로, 순전파를 fp16(현행 TRELLIS 실행과 같은 dtype 설정)으로. 결과 비교 항목은 원본과 같게 유지한다. 원본 대비 diff 를 보고서에 붙인다.
 3. **실제 규모 1회.** 같은 GPU 사본에서 v_stage1_cache 의 모델 크기만 바꾼다: 해상도 16(=4,096 토큰), 채널 1,024, 블록 24, 헤드 16, 조건 토큰 1,374, cond 채널 1,024. 무작위 가중치 대신 **실제 체크포인트**(`sparse_structure_flow_model`) 가중치로도 1회 돌린다. 보존 토큰 비율은 moto(546/4,096)를 쓴다. 캐시 용량·비트 동일 여부·max|Δ|·실행 시간·VRAM 피크를 적는다. CPU 메모리가 부족하면 그 수치와 함께 중단 사유를 적는다.
 4. v_stage2_misc 의 CFG 배치 부분과 v_cbin_direct 는 GPU 사본에서 같은 방식으로 1회씩. v_cbin_direct 는 CPU 경로이므로 A5000 CPU 실행 시간만 추가로 적는다.
@@ -123,7 +135,8 @@ Z-Image·BiRefNet 은 상주하지 않으므로 호출 1회의 비용을 잰다.
 ### B-4 Nunchaku INT4 FLUX Fill 기존 env (측정만, 변경 금지)
 - `flux-fill` env 와 가중치는 **수정·업데이트하지 않는다**(5번 R9 에서 다룬다). 0번에서는 사용하지 않는다.
 - 기존 README 측정값(INT4 1024²·30스텝 15.6 s, bf16+offload 59.5 s)은 `미검증` 으로만 인용한다. 0번에서 재실행하지 않는다.
-- bf16 가중치가 원본 `black-forest-labs/FLUX.1-Fill-dev` 가 아니라 비게이트 미러다. 미러 각 파일의 sha256 을 기록한다(원본 대조는 chief 가 고객사 확인 후 지시).
+- bf16 가중치가 원본 `black-forest-labs/FLUX.1-Fill-dev` 가 아니라 비게이트 미러다. 미러 snapshot 아래 **모든 파일**의 상대 경로와 sha256 을 `docs/reports/00-kickoff-3090.flux-sha256.txt`(`sha256sum` 형식, snapshot 기준 상대 경로)로 커밋한다.
+- 미러 사용 규칙(고객사 회신 A3, 2026-10-22): **원본과 파일별 sha256 이 전부 같을 때만 쓴다.** chief 가 A5000 표(A-5)와 대조해 판정한다. 판정 전에는 미러 bf16 을 어떤 측정에도 쓰지 않는다. 원본 가중치 확보 방법(계정 등)은 고객사 재문의 중이다.
 
 ### B-5 장비 간 전송 측정 (0번에서 제외)
 - 현행 인페인팅은 A5000 에서 돌아 장비 간 전송이 없다(00a A6). 전송 측정은 인페인팅을 3090 으로 옮기는 5번 R9 에서 한다. 오케스트레이터도 0번에서 기동하지 않는다.
@@ -136,12 +149,14 @@ Z-Image·BiRefNet 은 상주하지 않으므로 호출 1회의 비용을 잰다.
 
 ## 완료 조건
 
-- [ ] `check_pins.py` OK, `build/reference` 실행 성공(W39 꺼짐 로그 확인)
+- [ ] `check_pins.py` OK, `build/reference-v2` 실행 성공(W39 꺼짐 로그 확인)
 - [ ] `legacy/a5000/README.md` 의 (a)–(g) 전부 코드 근거와 함께 기재
-- [ ] 구간 1–8 기준선: 자산 2종 × 편집 2건 이상 × 3회, 평균±표준편차, 메모리 4종
+- [ ] 구간 1–8 기준선: moto-b(원저자 경로) × 마스크 2건 이상 × 3회, 평균±표준편차, 메모리 4종. 14건 기준선은 시나리오 동결 뒤 별도
+- [ ] FLUX 가중치 파일별 sha256 표(A-5, B-4)
+- [ ] moto-b feats SLat 확인 1–6 결과, 통과 시 W34 참고 측정(A-6)
 - [ ] 동일 코드 2회 실행 차이(Stage 1 coords, Stage 2 feats max|Δ|)
 - [ ] 4·6 구간 내부 분해(프로파일 1회)
-- [ ] 기존 실측 116–129 s(구간 4–7) 와 같은 자릿수인지 판정
+- [ ] 기존 실측 116–129 s(구간 4–7) 와 자릿수 대조(참고, 합격 판정에 쓰지 않음)
 - [ ] conformance 53/53, 서버 360 passed (A5000 에서)
 - [ ] 조건 렌더 3회 실행 간 픽셀 차이 표(A-5b)
 - [ ] 고객사 스크립트: 원본 실행, GPU fp16 사본(diff 첨부), 실제 규모 1회(A-7)
