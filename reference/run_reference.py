@@ -42,6 +42,7 @@ ap.add_argument("--image_dir", required=True, help="2d_render/2d_mask/2d_edit")
 ap.add_argument("--asset", required=True)
 ap.add_argument("--run", required=True, help="회차 이름 (r1, r2, ... / profile)")
 ap.add_argument("--reuse_render", help="동등성 대조용: 이 render 디렉터리(150뷰·mesh.ply)를 복사해 렌더 단계를 건너뛴다(inference.run_3d_rendering 의 기존 동작). 시간 기준선에는 쓰지 않는다")
+ap.add_argument("--seed", type=int, help="동등성 대조용: run_edit 직전 torch.manual_seed(seed). 기준선 시간 회차에는 쓰지 않는다(기준 구현은 시드 없음)")
 ap.add_argument("--profile", action="store_true", help="구간 4·6 torch.profiler 분해 (평균에서 제외)")
 ap.add_argument("--runs_dir", default=os.environ.get("RUNS_DIR", "runs"))
 ap.add_argument("--reference", default=os.environ.get("REFERENCE_DIR", "build/reference-v2"))
@@ -213,6 +214,12 @@ with SlatCapture(pipeline, slat_out, extra_meta={"mode": a.mode, "mask_fingerpri
         try:
             if a.mode == "original":
                 render_dir = work / "render"
+                if a.seed is not None:  # inference.run_3d_editing 안의 run_edit 직전에 시드
+                    _re = inf.run_edit
+                    def _seeded(*x, **k):
+                        torch.manual_seed(a.seed)
+                        return _re(*x, **k)
+                    inf.run_edit = _seeded
                 if a.reuse_render:
                     import shutil
                     shutil.copytree(a.reuse_render, render_dir, dirs_exist_ok=True,
@@ -223,6 +230,8 @@ with SlatCapture(pipeline, slat_out, extra_meta={"mode": a.mode, "mask_fingerpri
                     output_path=str(out_glb), image_dir=args_abs["image_dir"], is_text=False,
                     source_prompt="", target_prompt="")
             else:
+                if a.seed is not None:
+                    torch.manual_seed(a.seed)
                 with M.span("run_edit", segment="edit"):
                     ep.run_edit(pipeline, render_dir=None, output_path=str(out_glb),
                                 image_dir=args_abs["image_dir"], is_text=False, source_prompt="",
@@ -304,7 +313,7 @@ res = {
     "inputs": {k: args_abs[k] for k in ("model", "mask_glb", "slat", "image_dir")},
     "image_sha256": {n: hashlib.sha256((Path(args_abs["image_dir"]) / n).read_bytes()).hexdigest()
                      for n in ("2d_render.png", "2d_mask.png", "2d_edit.png")},
-    "reuse_render": a.reuse_render,
+    "reuse_render": a.reuse_render, "seed": a.seed,
     "edit_params": {"skip_step": 0, "re_init": False, "cfg": [5.0, 6.0, 0.0, 0.0]},
     "env": env_log, "error": error, "checks": checks, "counts": info["counts"],
     "cache_bytes": info["cache_bytes"], "profile": info["profile"],
