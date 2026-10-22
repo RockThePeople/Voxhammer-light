@@ -1,0 +1,65 @@
+"""모델 적재와 상수 유도.
+
+포크는 import 시 `ATTN_BACKEND=sdpa`, `SPCONV_ALGO=native` 를 강제한다(`edit_pipeline.py:1-3`).
+이식본도 trellis import 전에 같은 값으로 맞춘다(dense=sdpa; sparse 모듈은 sdpa 를 받지 않아 flash_attn).
+TRELLIS 코드는 기준 사본(`build/reference-v2`, VoxHammer 동봉본과 바이트 동일)에서 수정 없이 import 한다.
+"""
+from __future__ import annotations
+
+import os
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+# origin: voxhammer/edit_pipeline.py:1-3 @ f33cd96+patch
+os.environ["ATTN_BACKEND"] = "sdpa"
+os.environ["SPCONV_ALGO"] = "native"
+
+REPO = Path(__file__).resolve().parents[1]
+TRELLIS_ROOT = Path(os.environ.get("VHL_TRELLIS_ROOT", REPO / "build" / "reference-v2")).resolve()
+if str(TRELLIS_ROOT) not in sys.path:
+    sys.path.insert(0, str(TRELLIS_ROOT))
+
+MODEL_ID = "microsoft/TRELLIS-image-large"
+# TRELLIS `TrellisImageTo3DPipeline.preprocess_image`·포크 `preprocess_image` 의 고정 입력 크기
+COND_IMAGE_SIZE = 518
+
+
+@dataclass(frozen=True)
+class Constants:
+    """포크에 숫자로 박힌 상수를 모델 설정에서 유도한다(테스트가 원본 값과 비교)."""
+    ss_resolution: int        # 16
+    ss_tokens: int            # 4096 = 16³
+    ss_heads: int             # 16
+    ss_head_dim: int          # 64
+    voxel_res: int            # 64
+    latent_channels: int      # 8 (SS latent)
+    patch_size: int           # 14 (DINOv2)
+    patch_grid: int           # 37 = 518 / 14
+    cond_extra_tokens: int    # 5 = CLS 1 + register 4
+    cond_tokens: int          # 1374 = 37² + 5
+    cond_channels: int        # 1024
+
+
+def derive_constants(pipeline) -> Constants:
+    ss = pipeline.models["sparse_structure_flow_model"]
+    dino = pipeline.models["image_cond_model"]
+    res = int(ss.resolution) // int(ss.patch_size)
+    heads = int(ss.num_heads)
+    ps = int(dino.patch_embed.patch_size[0]) if hasattr(dino.patch_embed.patch_size, "__len__") else int(dino.patch_embed.patch_size)
+    grid = COND_IMAGE_SIZE // ps
+    extra = 1 + int(getattr(dino, "num_register_tokens", 0))
+    dec = pipeline.models["sparse_structure_decoder"]
+    up = 2 ** sum(1 for b in dec.blocks if type(b).__name__.startswith("UpsampleBlock")) if hasattr(dec, "blocks") else 4
+    return Constants(
+        ss_resolution=res, ss_tokens=res ** 3, ss_heads=heads, ss_head_dim=int(ss.model_channels) // heads,
+        voxel_res=int(ss.resolution) * up, latent_channels=int(ss.in_channels), patch_size=ps, patch_grid=grid,
+        cond_extra_tokens=extra, cond_tokens=grid * grid + extra, cond_channels=int(ss.cond_channels))
+
+
+def load_pipeline(model_id: str = MODEL_ID, device: str = "cuda"):
+    from trellis.pipelines import TrellisImageTo3DPipeline
+    pipe = TrellisImageTo3DPipeline.from_pretrained(model_id)
+    if device == "cuda":
+        pipe.cuda()
+    return pipe
