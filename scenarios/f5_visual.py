@@ -71,7 +71,7 @@ def main():
                 im = Image.open(d / tag / f"render_{v:04d}.png").convert("RGBA")
                 bg = Image.new("RGBA", im.size, "white")
                 t = Image.alpha_composite(bg, im).convert("RGB").resize((256, 256), Image.LANCZOS)
-                ImageDraw.Draw(t).text((4, 4), f"{'edit' if v == it['edit_view'] else '3/4'} v{v} {'원본' if tag == 'src' else '결과'}", fill=(200, 0, 0))
+                ImageDraw.Draw(t).text((4, 4), f"{'edit' if v == it['edit_view'] else '3/4'} v{v} {'source' if tag == 'src' else 'result'}", fill=(200, 0, 0))
                 tiles.append(t)
         row = Image.new("RGB", (4 * 256, 276), "white")
         ImageDraw.Draw(row).text((4, 2), it["label"], fill=(0, 0, 0))
