@@ -2,6 +2,8 @@
 
 3090 에서 FLUX.1-Fill-dev(INT4 transformer)를 한 번 올려 두고 HTTP 로 인페인팅을 받는 프로세스다.
 - 결과가 바뀌는 항목이라 **기본 꺼짐**이다. `VHL_R9=1` 일 때만 뜬다.
+  - INT4 채택은 확정됐다(사용자 2026-10-23).
+  - 기본값을 켜짐으로 바꾸는 것은 5번 PR 병합 때 chief 가 지시한다. 그 전까지 `.env` 에 `VHL_R9=1` 을 영구로 넣지 않는다.
 - 규약: [services/common/http-contract.md](../common/http-contract.md) §2
 - 측정 결과: [docs/reports/05-R9.md](../../docs/reports/05-R9.md)
 
