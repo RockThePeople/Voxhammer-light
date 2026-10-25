@@ -164,8 +164,9 @@ function addPanel(cfg = 'src', run = 'r1', host = document.getElementById('panel
 }
 
 // ── V-5 청크 보기 ─────────────────────────────────────────────────────────────
-const CHUNK_COLORS = { inherited: 0x9a9aa6, book: 0xff2020, occupancy: 0xffc400, removed: 0x555555 };
-const CHUNK_LABEL = { inherited: '승계(부모 바이트)', book: '변경 — 부기(마스크 ∪ halo)', occupancy: '변경 — 점유 변경으로만', removed: '제거' };
+const CHUNK_COLORS = { inherited: 0x9a9aa6, book: 0xff2020, occupancy: 0xffc400, new: 0x00b5d8, removed: 0x555555 };
+const CHUNK_LABEL = { inherited: '승계(부모 바이트)', book: '변경 — 부기(마스크 ∪ halo)', occupancy: '변경 — 점유 변경으로만',
+  new: '변경 — 신규(부모 없음)', removed: '제거' };
 
 function chunkBox(key, xf, color, dashed) {
   const [x, y, z] = key.split('_').map(Number);
@@ -227,7 +228,7 @@ function showChunkTable(p) {
   document.getElementById('chunksNote').textContent = `${info.rule}. 출처: ${info.source}. `
     + `승계 청크 전부 부모와 바이트 동일: ${info.inherited_all_equal_parent ? '예' : '아니오'}. `
     + `부모 ${info.parent_dir} · 자식 ${info.child_dir}. 변경·제거 청크를 위로 정렬.`;
-  const order = { book: 0, occupancy: 1, removed: 2, inherited: 3 };
+  const order = { book: 0, occupancy: 1, new: 2, removed: 3, inherited: 4 };
   const rows = [...info.rows].sort((a, b) => order[a.state] - order[b.state] || a.key.localeCompare(b.key));
   const head = el('tr', {}, ...['청크 키', '상태', '면 수', '부모 면 수', '바이트', 'sha256', '부모와 바이트 동일'].map((h) => el('th', {}, h)));
   document.getElementById('chunkTable').replaceChildren(head, ...rows.map((r) => el('tr', {},

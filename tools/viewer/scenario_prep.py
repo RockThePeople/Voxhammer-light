@@ -345,23 +345,23 @@ def chunk_view(s: dict, r: str, rdir: Path, src_cells: np.ndarray, res_cells: np
     rows, changed = [], []
     for k in sorted(set(parent) | set(child)):
         st = ("removed" if k not in child else "inherited" if (k in parent and k not in book and k not in occ)
-              else "book" if k in book else "occupancy")
+              else "book" if k in book else "occupancy" if k in occ else "new")   # new = 부모 없음 ∧ 변경 집합 밖 ∧ 결과 기하 있음
         b = child.get(k, parent.get(k)).read_bytes()
         m = dc.decode(b)
         row = {"key": k, "state": st, "faces": int(m.index_count // 3), "bytes": len(b), "sha256": hl.sha256(b).hexdigest()[:16]}
         if st == "inherited":
             row["equal_parent"] = b == parent[k].read_bytes()
-        if st in ("book", "occupancy") and k in parent:
+        if st in ("book", "occupancy", "new") and k in parent:
             row["parent_faces"] = int(dc.decode(parent[k].read_bytes()).index_count // 3)
         rows.append(row)
-        if st in ("book", "occupancy"):
+        if st in ("book", "occupancy", "new"):
             changed.append(k)
     d_out = CACHE / s["id"] / "r4"
     if not (d_out / "parent_chunks.glb").is_file():
         _chunk_scene(pdir, parent, d_out / "parent_chunks.glb")
     _chunk_scene(cdir / "chunks", changed, d_out / f"{r}.changed.glb")
-    cnt = {st: sum(x["state"] == st for x in rows) for st in ("inherited", "book", "occupancy", "removed")}
-    out = {"rule": "변경 = 부기(마스크 ∪ halo 2) ∪ 점유 변경 (R11, chief 2026-10-26)",
+    cnt = {st: sum(x["state"] == st for x in rows) for st in ("inherited", "book", "occupancy", "new", "removed")}
+    out = {"rule": "변경 = 부기(마스크 ∪ halo 2) ∪ 점유 변경 ∪ 신규(부모 없음) (R11, chief 2026-10-26)",
            "source": "cbin_r11" if cdir.name == "cbin_r11" else "cbin (부기만 쓴 원래 규칙 — R11 재조립 전)",
            "counts": cnt, "rows": rows, "parent_dir": str(pdir), "child_dir": str(cdir),
            "inherited_all_equal_parent": all(x.get("equal_parent", True) for x in rows)}
