@@ -62,7 +62,35 @@ def load_pipeline(model_id: str = MODEL_ID, device: str = "cuda"):
     pipe = TrellisImageTo3DPipeline.from_pretrained(model_id)
     if device == "cuda":
         pipe.cuda()
+    if ds_enabled():
+        names = apply_ds(pipe)[0]
+        print(f"[ds] VHL_DS_DETERMINISTIC=1: slat_flow_model SparseDownsample {len(names)}개 교체 {names}", flush=True)
     return pipe
+
+
+def ds_enabled():
+    """정오표 E16 검증 전용 토글. `VHL_DS_DETERMINISTIC=1` 일 때만 켜진다(기본 꺼짐 = 원본 비결정 연산)."""
+    return os.environ.get("VHL_DS_DETERMINISTIC", "") == "1"
+
+
+def apply_ds(pipe):
+    """Stage 2 flow 모델의 `SparseDownsample` 을 `DeterministicSparseDownsample` 로 모듈 교체한다.
+    (교체한 모듈 이름 목록, 원래대로 되돌리는 함수)를 돌려준다."""
+    import trellis.modules.sparse as sp
+    from .blocks import DeterministicSparseDownsample
+    model = pipe.models["slat_flow_model"]
+    done = []
+    for name, m in list(model.named_modules()):
+        if type(m) is sp.SparseDownsample:
+            parent, _, attr = name.rpartition(".")
+            owner = model.get_submodule(parent) if parent else model
+            setattr(owner, attr, DeterministicSparseDownsample(m.factor))
+            done.append((name, owner, attr, m))
+
+    def restore():
+        for _, owner, attr, m in done:
+            setattr(owner, attr, m)
+    return [d[0] for d in done], restore
 
 
 def e2a_steps(cli_s1=None, cli_s2=None):
