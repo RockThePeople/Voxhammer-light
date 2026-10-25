@@ -21,6 +21,7 @@
 - 22:53 A5000: DS A단계 7/16 전부 다섯 쌍 비트 동일(캐시·coords·보존·편집 셀), 모듈 558/558 동일. R4 구현 완료(`item/02-R4-a5000` `01da9c7`, CPU 40 passed), GPU 실행은 DS 뒤. 공용 판정 `tools/e14.py`(E14 + E15 두 상한). T1 뷰어 r4 칸 추가. **chief 결정: 시간 단축 우선 — DS A단계는 9건(완료 6 — moto-b rider-head·A-M1·A-M2·A-S1·A-S2·A-C1 — + B2·B3·B7, A5000 정정 `aed84d3`)으로 줄이고, B단계 분포 비교는 A단계 켬 실행을 재사용, 줄인 사실을 보고서에 적는다.**
 - **DS 완료 → PR #17(`f7c0c9d`), 고객사 제출 대기.** A단계 9건 한 프로세스 안 다섯 쌍 비트 동일, 분포 E14·E15 통과, 시간 영향 없음. 발견: 프로세스가 다르면 spconv `SparseConv3d`(Native, `trellis/modules/sparse/conv/conv_spconv.py:13-20`, spconv 2.3.8) 에서 갈림(B3 켬 4회가 두 묶음, 편집 셀 max 1.15e-2).
 - **chief 결정(2026-10-26):** spconv 는 고치지 않는다. 운용 규칙 — **비트 비교는 기준과 변경을 한 프로세스 안에서 돌릴 때만 판정에 쓴다.** 프로세스가 다른 비교(예: R8a 워커 vs CLI)는 E14·E15 분포 판정. R4 는 같은 저장 slat_tgt 재디코딩(한 프로세스)으로 비트 비교한다.
+- **R11 정정(2026-10-26 chief):** 요구사항 R11 은 "점유 비교로 바뀐 청크". R4 지시서의 부기 단독 규칙을 "부기 ∪ 점유 변경 청크"로 고침(마스크 밖 생성이 저장 SLat 과 화면 청크에서 어긋나지 않게). 이미 돈 GPU 실행은 CPU 재계산. T1 뷰어에 V-5 청크 in-place 보기 추가(Unity 대체 확인 화면).
 - **a5000 다음: 보조 DS** [tasks/01a-DS.md](tasks/01a-DS.md) — `VHL_DS_DETERMINISTIC`(기본 꺼짐), 2번 R4 앞.
 - **a5000 그다음: 2 R4** [tasks/02-R4.md](tasks/02-R4.md) — `VHL_R4`(기본 꺼짐). Unity 검사·프레임 시간은 보류(사용자 2026-10-25: 나중에 App 서버와 함께).
 - 지시서 준비됨: 3 R10a [tasks/03-R10a.md](tasks/03-R10a.md)(`VHL_R10A`, 1시점 + 마스크 depth 만, Cycles 시드 0), 4 R8a [tasks/04-R8a.md](tasks/04-R8a.md)(A5000 상주 워커·렌더·편집 엔드포인트만). 3090 오케스트레이터·ai-ar-v3 계약 변경 PR·두 장비 종단은 5번 R9 남은 범위 [tasks/05-R9.md](tasks/05-R9.md) R-7 로 옮김(요구사항서 R9 「입출력」 근거).
