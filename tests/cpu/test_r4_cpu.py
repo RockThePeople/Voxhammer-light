@@ -192,7 +192,9 @@ def test_vertex_color_render_glb():
     j = json.loads(out[20:20 + struct.unpack("<I", out[12:16])[0]])
     pr = j["meshes"][0]["primitives"][0]
     m = j["materials"][pr["material"]]["pbrMetallicRoughness"]
-    assert m["metallicFactor"] == 0.0 and m["baseColorFactor"] == [1.0, 1.0, 1.0, 1.0]
+    assert "metallicFactor" not in m and m["baseColorFactor"] == [1.0, 1.0, 1.0, 1.0]   # to_glb 와 같은 재질(glTF 기본 금속 1.0)
+    j0 = json.loads(vertex_color_render_glb(data, metallic=0.0)[20:20 + struct.unpack("<I", vertex_color_render_glb(data, metallic=0.0)[12:16])[0]])
+    assert j0["materials"][-1]["pbrMetallicRoughness"]["metallicFactor"] == 0.0
     acc = j["accessors"][pr["attributes"]["COLOR_0"]]
     assert acc["componentType"] == 5126 and acc["type"] == "VEC4"
     g = trimesh.load(io.BytesIO(out), file_type="glb", force="mesh", process=False)
