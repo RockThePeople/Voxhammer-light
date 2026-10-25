@@ -102,8 +102,10 @@ def rebuild():
             blobs, chunks, info = mesh_to_chunks(pipe, slat)
             book, occ = changed_sets(s, st)
             w = write_cbin(d / "cbin_r11", blobs, chunks, book=book | occ, parent_dir=s["parent"])
-            w.update({"mesh": info, "rule": "부기 ∪ 점유 변경 (R11, chief 2026-10-26)", "book_raw": len(book),
-                      "occupancy_changed_raw": len(occ)})
+            exist = set(w["sent"]) | set(w["reused"]) | set(w["removed"])
+            w.update({"mesh": info, "rule": "부기 ∪ 점유 변경 ∪ 신규 (R11, chief 2026-10-26)", "book_raw": len(book),
+                      "occupancy_changed_raw": len(occ), "book_existing": len(book & exist),
+                      "occupancy_only_added": len((occ - book) & exist)})
             # 원래 실행(다른 프로세스)의 새 청크 바이트와 같은지 — 프로세스 간 비결정(spconv, DS §3-4) 확인용
             old = d / "cbin" / "chunks"
             same = sum((old / f"{k}.cbin").is_file() and (old / f"{k}.cbin").read_bytes() == blobs[k] for k in w["sent"] if k in blobs)

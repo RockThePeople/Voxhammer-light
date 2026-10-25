@@ -63,12 +63,12 @@ def main():
                     parts[sp_["name"]] = parts.get(sp_["name"], 0.0) + sp_["seconds"]
             row = {"seg7": sum(parts.values()), "parts": parts, "precompute_bookkeeping_s": pre_s,
                    "sent": len(w["sent"]), "reused": len(w["reused"]), "removed": len(w["removed"]),
-                   "omitted_outside": len(w["omitted_outside"]), "book_existing": w["book_existing"],
+                   "new_outside": len(w["new_outside"]), "book_existing": w["book_existing"],
                    "occupancy_only_added": w["occupancy_only_added"]}
             if r == "r1":   # 결과 무영향: 동기 부기로 한 번 더(시간 미기록)
                 with tempfile.TemporaryDirectory() as td:
                     w2 = decode_to_cbin(pipe, slat, Path(td) / "cbin", mask_cells=mask, parent_dir=s["parent"], parent_cells=pc)
-                row["precompute_same_sets"] = all(sorted(w[k]) == sorted(w2[k]) for k in ("sent", "reused", "removed", "omitted_outside"))
+                row["precompute_same_sets"] = all(sorted(w[k]) == sorted(w2[k]) for k in ("sent", "reused", "removed", "new_outside"))
                 row["book_same"] = set(fut.result()) == bookkeeping(mask, 2)
             res[key] = row
             out.parent.mkdir(parents=True, exist_ok=True)

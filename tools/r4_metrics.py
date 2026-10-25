@@ -128,6 +128,8 @@ def _chunk_stats(d, cdir, s, r):
     faces_cbin = int(sum(e["index_count"] for e in man.values()) // 3)
     return {"chunks": j["chunks"], "sent": len(j["sent"]), "reused": len(j["reused"]), "removed": len(j["removed"]),
             "book_existing": j.get("book_existing"), "occupancy_only_added": j.get("occupancy_only_added"),
+            "new_outside": len(j.get("new_outside", [])), "new_outside_keys": j.get("new_outside", []),
+            "new_outside_faces": {k: int(dc.decode((cdir / "chunks" / f"{k}.cbin").read_bytes()).index_count // 3) for k in j.get("new_outside", [])},
             "inherited_bytes_equal_parent": inh_ok, "changed_bytes": j["sent_bytes"], "total_cbin_bytes": j["total_bytes"],
             "glb_bytes_off": glb.stat().st_size, "manifest_vertex_match": f"{vc}/{len(man)}", "manifest_index_match": f"{ic}/{len(man)}",
             "unit_normal_ratio": float(np.concatenate(unit).mean()) if unit else None, "faces_cbin": faces_cbin,

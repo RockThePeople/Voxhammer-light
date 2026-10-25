@@ -104,8 +104,8 @@ def test_inherit_outside_book(tmp_path):
     res = write_cbin(tmp_path / "out", cb, cc, book=book, parent_dir=parent)
     out = tmp_path / "out" / "chunks"
     for k in keys:
-        if k not in book and k not in pb:                 # 변경 집합 밖·부모에 없음 → 쓰지 않는다(R11)
-            assert not (out / f"{k}.cbin").exists() and k in res["omitted_outside"]
+        if k not in book and k not in pb:                 # 신규: 부모 없음 ∧ 변경 집합 밖 ∧ 결과 기하 있음 → 새 바이트(chief 결정)
+            assert (out / f"{k}.cbin").read_bytes() == cb[k] and k in res["sent"] and k in res["new_outside"]
             continue
         b = (out / f"{k}.cbin").read_bytes()
         if k not in book and k in pb and k not in cb:
@@ -115,7 +115,8 @@ def test_inherit_outside_book(tmp_path):
         else:
             assert b == pb[k] and k in res["reused"]      # 부기 밖 = 부모 바이트 그대로
     man = json.loads((tmp_path / "out" / "manifest.json").read_text())["chunks"]
-    assert set(man) == (set(keys) & (book | set(pb))) | {k for k in pb if k not in book}
+    assert set(man) == set(keys) | {k for k in pb if k not in book}
+    assert res["new_outside"], "신규 청크가 한 건도 없으면 이 테스트는 신규 규칙을 안 잰다"
     assert res["reused"], "부기 밖 승계가 한 건도 없으면 이 테스트는 아무것도 안 잰다"
     for k, e in man.items():                              # manifest ↔ 실제 바이트 ↔ 계약 디코더
         b = (out / f"{k}.cbin").read_bytes()
@@ -215,5 +216,5 @@ def test_bookkeeping_precompute_same_result(tmp_path):
     kw = dict(mask_cells=mask, parent_dir=tmp_path / "p", parent_cells=np.array([[1, 1, 1]]))
     a = decode_to_cbin(_Pipe(v2, f, attrs), _slat([[1, 1, 1], [40, 40, 32]]), tmp_path / "a", **kw)
     b = decode_to_cbin(_Pipe(v2, f, attrs), _slat([[1, 1, 1], [40, 40, 32]]), tmp_path / "b", book=bookkeeping_async(mask, 2), **kw)
-    for k in ("sent", "reused", "removed", "omitted_outside"):
+    for k in ("sent", "reused", "removed", "new_outside"):
         assert a[k] == b[k]

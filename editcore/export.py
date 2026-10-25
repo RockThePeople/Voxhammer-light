@@ -114,19 +114,21 @@ def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="
     pdir = Path(parent_dir) if parent_dir else None
     parent = {p.stem.split(".")[0]: p for p in sorted((pdir / "chunks" if (pdir / "chunks").is_dir() else pdir).glob("*.cbin"))} if pdir else {}
     book = set(book or [])
-    final, sent, reused, omitted = {}, [], [], []
+    final, sent, reused, new_outside = {}, [], [], []
     with span("bookkeeping", 7) if span else _null():
         for k in sorted(set(blobs) | {k for k in parent if k not in book}):
             if pdir is not None and k in parent and k not in book:
                 final[k] = ("parent", parent[k].read_bytes())
                 reused.append(k)
-            elif k in blobs and (pdir is None or k in book):
+            elif k in blobs:
+                # 변경 집합(부기 ∪ 점유 변경) 안, 또는 신규 청크(부모에 기하 없음 ∧ 결과에 기하 있음) → 새 바이트.
+                # 신규는 삼각형이 무게중심으로 배정돼 점유 셀 없는 이웃 청크에 생긴 결과 메시의 일부다. 부모 바이트가 없어
+                # 승계할 대상이 없고, 쓰지 않으면 청크 경계에 구멍이 생긴다 → 변경 청크에 넣는다(chief 결정 2026-10-26:
+                # 변경 = 부기 ∪ 점유 변경 ∪ 신규).
                 final[k] = ("fresh", blobs[k])
                 sent.append(k)
-            elif k in blobs:
-                # 변경 집합 밖인데 부모에 기하가 없던 청크: 삼각형이 무게중심으로 배정돼 점유 셀 없는 이웃 청크에 생긴 것.
-                # 부기 밖·점유 같음 → 바뀌지 않는다(R11) → 쓰지 않는다(chief 검토 2026-10-26).
-                omitted.append(k)
+                if pdir is not None and k not in book and k not in parent:
+                    new_outside.append(k)
         removed = sorted(k for k in book if k in parent and k not in final)
     with span("cbin_write", 7) if span else _null():
         entries = {}
@@ -138,7 +140,7 @@ def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="
                                     voxel_count=int(cm.voxel_count), version=int(version))
         man = ChunkManifest(asset_id=asset_id, version=int(version), chunks=entries)
         (out_dir / "manifest.json").write_text(man.model_dump_json(indent=2))
-    return {"chunks": len(final), "sent": sent, "reused": reused, "removed": removed, "omitted_outside": omitted, "book": sorted(book),
+    return {"chunks": len(final), "sent": sent, "reused": reused, "removed": removed, "new_outside": new_outside, "book": sorted(book),
             "sent_bytes": int(sum(len(final[k][1]) for k in sent)), "total_bytes": int(sum(len(v[1]) for v in final.values())),
             "parent_dir": str(pdir) if pdir else None}
 
@@ -170,7 +172,7 @@ def decode_to_cbin(pipeline, slat_tgt, out_dir, *, mask_cells=None, parent_dir=N
             occ = occupancy_changed_chunks(parent_cells, slat_tgt.coords[:, 1:].detach().cpu().numpy())
     res = write_cbin(out_dir, blobs, chunks, book=book | occ, parent_dir=parent_dir, hooks=hooks)
     exist = set(res["sent"]) | set(res["reused"]) | set(res["removed"])
-    res.update({"mesh": info, "rule": "부기 ∪ 점유 변경 (R11)", "book_raw": len(book), "book_existing": len(book & exist),
+    res.update({"mesh": info, "rule": "부기 ∪ 점유 변경 ∪ 신규 (R11, chief 2026-10-26)", "book_raw": len(book), "book_existing": len(book & exist),
                 "occupancy_changed": len(occ & exist), "occupancy_only_added": len((occ - book) & exist)})
     if glb_path:
         span = (hooks or {}).get("span")
