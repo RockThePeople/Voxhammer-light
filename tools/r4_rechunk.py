@@ -81,9 +81,9 @@ def sets():
 
 def rebuild():
     import torch
+    import editcore.models as em   # trellis 경로·ATTN_BACKEND 를 먼저 맞춘다
     import trellis.modules.sparse as sp
     from safetensors import safe_open
-    import editcore.models as em
     from editcore.export import mesh_to_chunks, write_cbin
     pipe = em.load_pipeline()
     v3 = str(ROOT / "third_party" / "ai-ar-v3")

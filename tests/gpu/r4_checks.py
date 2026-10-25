@@ -6,7 +6,12 @@ phase decode  : R-3.2 같은 slat_tgt(E2a c15 r1)에서 `["mesh"]` 2회 · `["ga
                 R-3.4 메시 밀도: 기존 GLB(c15 r1 output.glb, to_glb 단순화) 면 수 vs mesh 디코더 면 수.
 phase render  : R-2 렌더 입력 교체 — 포크 Cycles 렌더러(`utils/render_rgb_and_mask.render_model`)로 같은 시점에서
                 (a) 기존 텍스처 GLB(c15 r1) (b) R4 정점색 GLB(r4-on r1, glbbuild) 를 렌더 → 편집 시점 RGB·알파 차이.
-결과: $RUNS_DIR/02-r4/{parents/<B#>/, checks/decode.json, checks/render/<ID>/{a,b}/, checks/render.json}
+phase decode2 : R-3.2 판정 기준(chief 2026-10-26): 위상(면) 동일 + 정점·속성 |Δ| ≤ 1e-6 이면 동일. 같은 프로세스 2회와
+                `["mesh"]` 단독 vs `["gaussian","mesh"]` 의 max|Δ| 를 적는다.
+phase render2 : R-2 보정(editcore/render.py:vertex_color_render_glb — 흰 비금속 재질 + COLOR_0 sRGB→선형) 뒤 다시 비교.
+                b1 = r4-on r1 정점색 GLB 를 보정해 렌더. (a) 기존 텍스처 GLB 대비 RGB max·mean, b0(보정 전) 대비 2D 마스크(알파) 비트 동일,
+                시트 docs/reports/img/02-R4-render.png (편집 시점·3/4 시점: 기존 텍스처 | 보정 정점색).
+결과: $RUNS_DIR/02-r4/{parents/<B#>/, checks/decode.json, checks/decode2.json, checks/render/<ID>/{a,b,b1}/, checks/render{,2}.json}
 """
 from __future__ import annotations
 
@@ -89,6 +94,92 @@ def decode():
     (OUT / "checks" / "decode.json").write_text(json.dumps(res, indent=1))
 
 
+def decode2():
+    import torch
+    pipe = em.load_pipeline()
+    res = {}
+    for s in scenarios():
+        slat = load_slat(RUNS / E2A_DAY / s["name"] / "e2a-c15" / "r1" / "slat_tgt.safetensors")
+        with torch.no_grad():
+            m1 = pipe.decode_slat(slat, ["mesh"])["mesh"][0]
+            m2 = pipe.decode_slat(slat, ["mesh"])["mesh"][0]
+            both = pipe.decode_slat(slat, ["gaussian", "mesh"])["mesh"][0]
+
+        def cmp(a, b):
+            if a.faces.shape != b.faces.shape or a.vertices.shape != b.vertices.shape:
+                return {"faces_equal": False, "same_shape": False, "equal": False}
+            fv = float((a.vertices - b.vertices).abs().max())
+            fa = float((a.vertex_attrs - b.vertex_attrs).abs().max()) if a.vertex_attrs is not None else 0.0
+            fe = bool(torch.equal(a.faces, b.faces))
+            return {"faces_equal": fe, "vert_max": fv, "attr_max": fa, "bit_equal": bool(fe and fv == 0 and fa == 0),
+                    "equal": bool(fe and fv <= 1e-6 and fa <= 1e-6)}
+        res[s["id"]] = {"mesh_twice": cmp(m1, m2), "mesh_vs_with_gaussian": cmp(m1, both), "faces": int(m1.faces.shape[0])}
+        print(s["id"], res[s["id"]], flush=True)
+        del m1, m2, both
+        torch.cuda.empty_cache()   # 검증 스크립트(계측 구간 밖)
+    (OUT / "checks" / "decode2.json").write_text(json.dumps(res, indent=1))
+
+
+def render2():
+    import trimesh
+    from PIL import Image, ImageDraw
+    from editcore.render import vertex_color_render_glb
+    res, rows = {}, []
+    for s in scenarios():
+        d = OUT / "checks" / "render" / s["id"]
+        src = OUT / s["name"] / "r4-on" / "r1" / "output.glb"
+        (d / "b1").mkdir(parents=True, exist_ok=True)
+        g = src
+        if s["norm"]:   # 트랙 A: 원본과 같은 정규화(F-5·E2a 시트와 같게)
+            sc = trimesh.load(src)
+            sc.apply_translation([-x for x in s["norm"]["center_glb_frame"]])
+            sc.apply_scale(s["norm"]["scale"])
+            g = d / "b1" / "normalized_raw.glb"
+            sc.export(g)
+        fixed = d / "b1" / "render_input.glb"
+        fixed.write_bytes(vertex_color_render_glb(Path(g).read_bytes()))
+        if not (d / "b1" / "render_0004.png").exists():
+            subprocess.run([PY, "-c", RENDER, str(REF), str(fixed), str(d / "b1")], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        v34 = 3 if s["edit_view"] == 1 else 1
+        L = lambda t, v: np.asarray(Image.open(d / t / f"render_{v:04d}.png").convert("RGBA")).astype(int)
+        row = {}
+        for tag, v in (("edit", s["edit_view"]), ("34", v34)):
+            a, b0, b1 = L("a", v), L("b", v), L("b1", v)
+            both = (a[..., 3] > 0) & (b1[..., 3] > 0)
+            diff = np.abs(a[..., :3] - b1[..., :3])[both]
+            row[tag] = {"view": v, "rgb_max": int(diff.max()), "rgb_mean": float(diff.mean()),
+                        "mask_bit_equal_b0_b1": bool(np.array_equal(b0[..., 3], b1[..., 3])),
+                        "alpha_iou_a_b1": float(both.sum() / max(((a[..., 3] > 0) | (b1[..., 3] > 0)).sum(), 1)),
+                        "rgb_mean_before_fix": float(np.abs(a[..., :3] - b0[..., :3])[(a[..., 3] > 0) & (b0[..., 3] > 0)].mean())}
+        res[s["id"]] = row
+        print(s["id"], row, flush=True)
+        T = 256
+        tiles = []
+        for tag, v in (("edit", s["edit_view"]), ("3/4", v34)):
+            for t, lab in (("a", "textured GLB (to_glb)"), ("b1", "R4 vertex-color GLB (fixed)")):
+                im = Image.open(d / t / f"render_{v:04d}.png").convert("RGBA")
+                tile = Image.alpha_composite(Image.new("RGBA", im.size, "white"), im).convert("RGB").resize((T, T), Image.LANCZOS)
+                ImageDraw.Draw(tile).text((4, 4), f"{tag} v{v} {lab}", fill=(200, 0, 0))
+                tiles.append(tile)
+        r = Image.new("RGB", (4 * T, T + 18), "white")
+        ImageDraw.Draw(r).text((4, 3), f"{s['id']}  rgb mean diff edit {row['edit']['rgb_mean']:.1f} (before fix {row['edit']['rgb_mean_before_fix']:.1f})", fill=(0, 0, 0))
+        for i, t in enumerate(tiles):
+            r.paste(t, (T * i, 18))
+        rows.append(r)
+    head = Image.new("RGB", (4 * 256, 20), "white")
+    ImageDraw.Draw(head).text((4, 4), "Renderer: fork utils/render_rgb_and_mask.render_model (Blender Cycles). r1. R4 input fixed by editcore/render.py.", fill=(0, 0, 160))
+    sheet = Image.new("RGB", (4 * 256, 20 + sum(x.height for x in rows)), "white")
+    sheet.paste(head, (0, 0))
+    y = 20
+    for x in rows:
+        sheet.paste(x, (0, y)); y += x.height
+    dst = REPO / "docs" / "reports" / "img" / "02-R4-render.png"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(dst, optimize=True)
+    (OUT / "checks" / "render2.json").write_text(json.dumps(res, indent=1))
+
+
 RENDER = r"""
 import os, sys
 ref, glb, out = sys.argv[1:4]
@@ -135,4 +226,4 @@ def render():
 
 
 if __name__ == "__main__":
-    {"parents": parents, "decode": decode, "render": render}[sys.argv[1]]()
+    {"parents": parents, "decode": decode, "render": render, "decode2": decode2, "render2": render2}[sys.argv[1]]()

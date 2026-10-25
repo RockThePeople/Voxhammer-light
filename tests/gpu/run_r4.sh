@@ -11,7 +11,7 @@ PY="${VH_PY:-$HOME/ai-ar-v2/VoxHammer/.venv/bin/python}"
 export VHL_E2A_STEPS_S1=15 VHL_E2A_STEPS_S2=15
 cd "$ROOT"
 case "$1" in
-  parents|decode|render) "$PY" -u tests/gpu/r4_checks.py "$1"; exit $? ;;
+  parents|decode|render|decode2|render2) "$PY" -u tests/gpu/r4_checks.py "$1"; exit $? ;;
 esac
 A=$ASSETS_DIR/track_a; B=$ASSETS_DIR/track_b; P=$RUNS_DIR/02-r4/parents
 jobs=()

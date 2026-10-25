@@ -108,43 +108,75 @@ def equiv_phase():
     (OUT / "equiv.json").write_text(json.dumps(res, indent=1))
 
 
-def chunks_phase():
+def _chunk_stats(d, cdir, s, r):
     import trimesh
     import deltacontract as dc
+    j = json.loads((cdir / "r4.json").read_text())
+    man = json.loads((cdir / "manifest.json").read_text())["chunks"]
+    # 승계 청크만 부모와 바이트 비교(chief 2026-10-26). 새 청크 바이트는 비트 비교하지 않는다(FlexiCubes index_add_ 반올림).
+    inh_ok = all((cdir / "chunks" / f"{k}.cbin").read_bytes() == (s["parent"] / f"{k}.cbin").read_bytes() for k in j["reused"])
+    vc = ic = 0
+    unit = []
+    for k, e in man.items():
+        m = dc.decode((cdir / "chunks" / f"{k}.cbin").read_bytes())
+        vc += int(m.vertex_count == e["vertex_count"]); ic += int(m.index_count == e["index_count"])
+        if m.normals is not None:
+            unit.append(np.abs(np.linalg.norm(np.asarray(m.normals, np.float32), axis=1) - 1) < 1e-3)
+    glb = off_dir(s, r) / "output.glb"
+    g = trimesh.load(glb, force="mesh", process=False)
+    faces_cbin = int(sum(e["index_count"] for e in man.values()) // 3)
+    return {"chunks": j["chunks"], "sent": len(j["sent"]), "reused": len(j["reused"]), "removed": len(j["removed"]),
+            "book_existing": j.get("book_existing"), "occupancy_only_added": j.get("occupancy_only_added"),
+            "inherited_bytes_equal_parent": inh_ok, "changed_bytes": j["sent_bytes"], "total_cbin_bytes": j["total_bytes"],
+            "glb_bytes_off": glb.stat().st_size, "manifest_vertex_match": f"{vc}/{len(man)}", "manifest_index_match": f"{ic}/{len(man)}",
+            "unit_normal_ratio": float(np.concatenate(unit).mean()) if unit else None, "faces_cbin": faces_cbin,
+            "faces_glb_off": int(len(g.faces)), "face_ratio": faces_cbin / max(len(g.faces), 1)}
+
+
+def chunks_phase():
+    """청크 집계: R11 정정 규칙(cbin_r11, 기준) + 원래 규칙(cbin, 참고). 승계 청크 부모 바이트 대조, 바이트 3종(변경·전체·기존 GLB)."""
     res = {}
     for s in scenarios():
         row = {}
         for r in RUN_IDS:
             d = on_dir(s, r)
-            if not (d / "cbin" / "r4.json").is_file():
-                continue
-            j = json.loads((d / "cbin" / "r4.json").read_text())
-            man = json.loads((d / "cbin" / "manifest.json").read_text())["chunks"]
-            inh_ok = all((d / "cbin" / "chunks" / f"{k}.cbin").read_bytes() == (s["parent"] / f"{k}.cbin").read_bytes() for k in j["reused"])
-            vc = ic = 0
-            unit = []
-            for k, e in man.items():
-                m = dc.decode((d / "cbin" / "chunks" / f"{k}.cbin").read_bytes())
-                vc += int(m.vertex_count == e["vertex_count"]); ic += int(m.index_count == e["index_count"])
-                if m.normals is not None:
-                    n = np.linalg.norm(np.asarray(m.normals, np.float32), axis=1)
-                    unit.append(np.abs(n - 1) < 1e-3)
-            faces_cbin = int(sum(e["index_count"] for e in man.values()) // 3)
-            glb = trimesh.load(off_dir(s, r) / "output.glb", force="mesh", process=False)
-            row[r] = {"chunks": j["chunks"], "sent": len(j["sent"]), "reused": len(j["reused"]), "removed": len(j["removed"]),
-                      "book": len(j["book"]), "parent_chunks": len(list(s["parent"].glob("*.cbin"))),
-                      "inherited_bytes_equal_parent": inh_ok, "sent_bytes": j["sent_bytes"], "total_bytes": j["total_bytes"],
-                      "manifest_vertex_match": f"{vc}/{len(man)}", "manifest_index_match": f"{ic}/{len(man)}",
-                      "unit_normal_ratio": float(np.concatenate(unit).mean()) if unit else None,
-                      "faces_cbin": faces_cbin, "faces_mesh_decoder": j["mesh"]["faces"], "faces_glb_off": int(len(glb.faces)),
-                      "face_ratio": faces_cbin / max(len(glb.faces), 1)}
+            x = {}
+            for rule, cdir in (("r11", d / "cbin_r11"), ("bookkeeping_only", d / "cbin")):
+                if (cdir / "r4.json").is_file():
+                    x[rule] = _chunk_stats(d, cdir, s, r)
+            if x:
+                row[r] = x
         res[s["id"]] = row
-        if row:
-            r1 = row.get("r1") or next(iter(row.values()))
-            print(s["id"], {k: r1[k] for k in ("chunks", "sent", "reused", "removed", "book", "inherited_bytes_equal_parent", "faces_cbin", "faces_glb_off")}, flush=True)
+        if row and "r1" in row:
+            y = row["r1"].get("r11") or row["r1"].get("bookkeeping_only")
+            print(s["id"], {k: y[k] for k in ("chunks", "sent", "reused", "occupancy_only_added", "inherited_bytes_equal_parent",
+                                               "changed_bytes", "total_cbin_bytes", "glb_bytes_off")}, flush=True)
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "chunks.json").write_text(json.dumps(res, indent=1))
 
 
+def time_r11_phase():
+    """R11 정정 규칙 구간 7 재측정(A-M1·B2·B6 × 3, 장비가 빈 상태) vs 원래 규칙(같은 시나리오 r4-on) vs 끔(c15)."""
+    res = {}
+    for s in scenarios():
+        dd = RUNS / "02-r4" / s["name"] / "r4-r11"
+        J = [json.loads((dd / f"{r}.json").read_text()) for r in RUN_IDS if (dd / f"{r}.json").is_file()]
+        if not J:
+            continue
+        on = [json.loads(on_json(s, r).read_text()) for r in RUN_IDS]
+        off = [json.loads(off_json(s, r).read_text()) for r in RUN_IDS]
+        seg = lambda j, n: j["segments"].get(n, {})
+        f = lambda runs: {"seg7": ms([seg(j, "7").get("seconds") for j in runs]),
+                          "seg4_7": ms([sum(seg(j, n).get("seconds", 0) for n in ("4", "5", "6", "7")) for j in runs]),
+                          "parts7": {p: ms([seg(j, "7").get("parts", {}).get(p) for j in runs])
+                                     for p in sorted({p for j in runs for p in seg(j, "7").get("parts", {})})}}
+        res[s["id"]] = {"r11": f(J), "bookkeeping_only": f(on), "off_c15": f(off),
+                        "sent_chunks_r11": [j["r4"]["sent"].__len__() if isinstance(j["r4"]["sent"], list) else j["r4"]["sent"] for j in J],
+                        "sent_chunks_old": [len(j["r4"]["sent"]) for j in on]}
+        print(s["id"], "seg7 off %.1f | old %.1f | r11 %.1f" % (res[s["id"]]["off_c15"]["seg7"][0], res[s["id"]]["bookkeeping_only"]["seg7"][0], res[s["id"]]["r11"]["seg7"][0]), flush=True)
+    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / "time_r11.json").write_text(json.dumps(res, indent=1))
+
+
 if __name__ == "__main__":
-    {"time": time_phase, "equiv": equiv_phase, "chunks": chunks_phase}[sys.argv[1]]()
+    {"time": time_phase, "equiv": equiv_phase, "chunks": chunks_phase, "time_r11": time_r11_phase}[sys.argv[1]]()

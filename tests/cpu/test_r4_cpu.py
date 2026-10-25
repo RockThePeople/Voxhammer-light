@@ -172,3 +172,28 @@ def test_decode_to_cbin_occupancy_outside_book(tmp_path):
     assert (tmp_path / "out" / "chunks" / f"{target}.cbin").read_bytes() != pb[target]
     for k in r["reused"]:
         assert (tmp_path / "out" / "chunks" / f"{k}.cbin").read_bytes() == pb[k]
+
+
+def test_vertex_color_render_glb():
+    """R-2 렌더 입력 보정: 기본 재질 추가, COLOR_0 sRGB→선형(float32), 기하 그대로."""
+    import io
+    import json
+    import struct
+    import trimesh
+    from editcore.render import vertex_color_render_glb
+    v, f, _ = _grid_mesh(n=6)
+    col = np.tile(np.array([[128, 10, 255, 255]], np.uint8), (len(v), 1))
+    data = trimesh.Trimesh(v, f, vertex_colors=col, process=False).export(file_type="glb")
+    out = vertex_color_render_glb(data)
+    j = json.loads(out[20:20 + struct.unpack("<I", out[12:16])[0]])
+    pr = j["meshes"][0]["primitives"][0]
+    m = j["materials"][pr["material"]]["pbrMetallicRoughness"]
+    assert m["metallicFactor"] == 0.0 and m["baseColorFactor"] == [1.0, 1.0, 1.0, 1.0]
+    acc = j["accessors"][pr["attributes"]["COLOR_0"]]
+    assert acc["componentType"] == 5126 and acc["type"] == "VEC4"
+    g = trimesh.load(io.BytesIO(out), file_type="glb", force="mesh", process=False)
+    assert np.array_equal(np.asarray(g.vertices, np.float32), v) and np.array_equal(g.faces, f)
+    bv = j["bufferViews"][acc["bufferView"]]
+    boff = 20 + struct.unpack("<I", out[12:16])[0] + 8
+    c = np.frombuffer(out, np.float32, acc["count"] * 4, boff + bv["byteOffset"]).reshape(-1, 4)
+    assert np.allclose(c[0, :3], [0.2158605, 0.0030353, 1.0], atol=1e-5)   # sRGB 128/255, 10/255, 1 → 선형
