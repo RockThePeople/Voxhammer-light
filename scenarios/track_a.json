@@ -359,7 +359,7 @@
    "status": "동결 (00s2 F-2)",
    "edit_seed": 0,
    "part": "오른팔 옆 빈 공간(바닥~팔 높이, 손 끝 포함)",
-   "note": "정오표 E9 교체(top hat → straw broom)"
+   "note": "마스크 밖 생성(알려진 결함) — 정오표 E12, 위치 분석은 docs/reports/01-E2a.md 부록 S-5(2)"
   },
   "A-S2": {
    "asset": "snowman",
@@ -545,7 +545,8 @@
    },
    "condition_seed": 0,
    "status": "동결 (00s2 F-2)",
-   "edit_seed": 0
+   "edit_seed": 0,
+   "note": "조건 이미지 약함(한쪽 팔걸이만 제거) — 정오표 E12, R9·E4 평가의 비교 사례"
   }
  }
 }
