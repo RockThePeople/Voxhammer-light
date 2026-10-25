@@ -89,8 +89,21 @@ def bookkeeping(mask_cells, halo=2):
     return set(dc.affected_chunks(None, None, cells))
 
 
+def occupancy_changed_chunks(parent_cells, child_cells):
+    """R11 점유 비교(요구사항 4.4 0번 R11): 청크 안 SLat 점유 셀 집합이 부모와 다른 청크 키 = 대칭차 셀이 속한 청크."""
+    _contract()
+    from deltacontract.coords import chunk_keys_sorted, voxel_to_chunk
+    code = lambda c: c[:, 0] * 4096 + c[:, 1] * 64 + c[:, 2]
+    p = np.asarray(parent_cells, dtype=np.int64).reshape(-1, 3)
+    c = np.asarray(child_cells, dtype=np.int64).reshape(-1, 3)
+    d = np.setxor1d(code(p), code(c))
+    if d.size == 0:
+        return set()
+    return set(chunk_keys_sorted(voxel_to_chunk(np.stack([d // 4096, (d // 64) % 64, d % 64], 1))))
+
+
 def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="vhl", version=1, hooks=None):
-    """R4 쓰기부: 부기 밖 청크는 부모 바이트를 그대로 복사(R11 승계), 부기 안·부모에 없는 청크는 새 바이트.
+    """R4 쓰기부: 변경 집합(book 인자 = 부기 ∪ 점유 변경) 밖 청크는 부모 바이트를 그대로 복사(R11 승계), 안·부모에 없는 청크는 새 바이트.
     부모에만 있고 새 디코딩에 없는 부기 밖 청크도 부모 바이트로 남긴다(부기 밖은 바뀌지 않는다).
     부기 안에서 기하가 사라진 부모 청크는 removed 로 적는다(계약 3.4.3)."""
     dc = _contract()
@@ -126,13 +139,23 @@ def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="
             "parent_dir": str(pdir) if pdir else None}
 
 
-def decode_to_cbin(pipeline, slat_tgt, out_dir, *, mask_cells=None, parent_dir=None, halo=2, glb_path=None, hooks=None):
+def decode_to_cbin(pipeline, slat_tgt, out_dir, *, mask_cells=None, parent_dir=None, parent_cells=None, halo=2,
+                   glb_path=None, hooks=None):
     """R4 진입점. `out_dir/chunks/*.cbin`·`manifest.json`·`r4.json`, 그리고 glb_path 가 있으면 `.cbin` 에서 조립한
-    정점색 GLB(ai-ar-v3 `server/glbbuild.build_glb`, 렌더·뷰어 입력)를 쓴다."""
+    정점색 GLB(ai-ar-v3 `server/glbbuild.build_glb`, 렌더·뷰어 입력)를 쓴다.
+    변경 청크 = 부기(마스크 ∪ halo) ∪ 점유 변경(parent_cells 가 있으면, R11 — chief 정정 2026-10-26). 나머지는 부모 승계."""
     blobs, chunks, info = mesh_to_chunks(pipeline, slat_tgt, hooks=hooks)
-    book = bookkeeping(mask_cells, halo) if (mask_cells is not None and parent_dir) else set()
-    res = write_cbin(out_dir, blobs, chunks, book=book, parent_dir=parent_dir, hooks=hooks)
-    res["mesh"] = info
+    span = (hooks or {}).get("span")
+    book, occ = set(), set()
+    with span("bookkeeping", 7) if span else _null():
+        if mask_cells is not None and parent_dir:
+            book = bookkeeping(mask_cells, halo)
+        if parent_cells is not None and parent_dir:
+            occ = occupancy_changed_chunks(parent_cells, slat_tgt.coords[:, 1:].detach().cpu().numpy())
+    res = write_cbin(out_dir, blobs, chunks, book=book | occ, parent_dir=parent_dir, hooks=hooks)
+    exist = set(res["sent"]) | set(res["reused"]) | set(res["removed"])
+    res.update({"mesh": info, "rule": "부기 ∪ 점유 변경 (R11)", "book_raw": len(book), "book_existing": len(book & exist),
+                "occupancy_changed": len(occ & exist), "occupancy_only_added": len((occ - book) & exist)})
     if glb_path:
         span = (hooks or {}).get("span")
         with span("glb_build", "r4_glb") if span else _null():   # 구간 7 밖(렌더·뷰어 입력용)

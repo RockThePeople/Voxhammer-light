@@ -63,9 +63,13 @@ def main(argv=None):
         from .export import decode_to_cbin
         mask_cells = json.loads(Path(a.mask_json).read_text())["mask"]["voxels"]
         cdir = Path(a.cbin_out) if a.cbin_out else Path(a.out).parent / "cbin"
-        r4 = decode_to_cbin(pipe, res.slat_tgt, cdir, mask_cells=mask_cells, parent_dir=a.parent_cbin, glb_path=a.out, hooks=hooks)
+        from safetensors import safe_open
+        with safe_open(a.slat, "np") as f:   # R11 점유 비교의 부모 = 입력 SLat
+            parent_cells = f.get_tensor("coords")[:, 1:]
+        r4 = decode_to_cbin(pipe, res.slat_tgt, cdir, mask_cells=mask_cells, parent_dir=a.parent_cbin, parent_cells=parent_cells,
+                            glb_path=a.out, hooks=hooks)
         print(f"[r4] VHL_R4=1 mesh-only → .cbin {cdir}: chunks {r4['chunks']} (새 {len(r4['sent'])}, 부모 승계 {len(r4['reused'])}, "
-              f"removed {len(r4['removed'])}, 부기 {len(r4['book'])}), 면 {r4['mesh']['faces']}, 바이트 {r4['total_bytes']}", flush=True)
+              f"removed {len(r4['removed'])}, 부기 {r4['book_existing']}, 점유 변경으로만 {r4['occupancy_only_added']}), 면 {r4['mesh']['faces']}, 바이트 {r4['total_bytes']}", flush=True)
     else:
         decode_to_glb(pipe, res.slat_tgt, a.out, hooks=hooks)
     for h in handles:

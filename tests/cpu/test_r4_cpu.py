@@ -136,3 +136,39 @@ def test_removed_and_parent_only_chunks(tmp_path):
     res = write_cbin(tmp_path / "o", cb, pc, book={gone_in_book}, parent_dir=tmp_path / "p")
     assert res["removed"] == [gone_in_book]                    # 부기 안에서 사라진 부모 청크 → removed
     assert (tmp_path / "o" / "chunks" / f"{gone_out_book}.cbin").read_bytes() == pb[gone_out_book]   # 부기 밖은 남는다
+
+
+def test_occupancy_changed_chunks():
+    """R11 점유 비교: 청크(4³ 셀) 안 점유 셀 집합이 다른 청크만."""
+    import deltacontract as dc
+    from editcore.export import occupancy_changed_chunks
+    parent = np.array([[0, 0, 0], [5, 5, 5], [40, 40, 40]])
+    child = np.array([[0, 0, 0], [5, 5, 6], [40, 40, 40], [63, 63, 63]])   # (5,5,5)→(5,5,6) 같은 청크, (63,63,63) 새 청크
+    got = occupancy_changed_chunks(parent, child)
+    assert got == {dc.chunk_key((1, 1, 1)), dc.chunk_key((15, 15, 15))}
+    assert occupancy_changed_chunks(parent, parent) == set()
+
+
+def test_decode_to_cbin_occupancy_outside_book(tmp_path):
+    """부기 밖이라도 점유가 바뀐 청크는 새 바이트(마스크 밖 생성이 화면에 반영), 나머지는 부모 승계."""
+    import deltacontract as dc
+    from editcore.export import decode_to_cbin, mesh_to_chunks
+    v, f, attrs = _grid_mesh()
+    pb, _, _ = mesh_to_chunks(_Pipe(v, f, attrs), _slat([[1, 1, 1]]))
+    parent = tmp_path / "parent" / "chunks"
+    parent.mkdir(parents=True)
+    for k, b in pb.items():
+        (parent / f"{k}.cbin").write_bytes(b)
+    v2 = v.copy()
+    v2[:, 2] += 0.0005
+    keys = sorted(pb)
+    target = keys[len(keys) // 2]                      # 부기 밖이지만 점유가 바뀌는 청크
+    cid = dc.parse_chunk_key(target)
+    child_cells = np.array([[4 * cid[0], 4 * cid[1], 4 * cid[2]]])
+    pipe = _Pipe(v2, f, attrs)
+    r = decode_to_cbin(pipe, _slat(child_cells), tmp_path / "out", mask_cells=np.array([[0, 0, 0]]),
+                       parent_dir=tmp_path / "parent", parent_cells=np.zeros((0, 3), np.int64))
+    assert r["occupancy_only_added"] >= 1 and target in r["sent"]
+    assert (tmp_path / "out" / "chunks" / f"{target}.cbin").read_bytes() != pb[target]
+    for k in r["reused"]:
+        assert (tmp_path / "out" / "chunks" / f"{k}.cbin").read_bytes() == pb[k]
