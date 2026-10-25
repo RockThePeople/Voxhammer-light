@@ -62,15 +62,24 @@ VoxHammer(f33cd96 + 기준 패치) 기반 3D 편집 1회의 벽시계 시간을 
   - W34 SLat 재사용 입력과 `slat_space=denormalized` 검사
   - attention 계산: 편집 경로의 Stage 1·2 attention 은 포크의 `ss_attn_forward`(`edit_pipeline.py:183`)·`slat_attn_forward`(`:293`)가 `F.scaled_dot_product_attention` 을 **직접** 호출한다(코드확인). TRELLIS 의 sparse attention 백엔드(flash_attn)는 편집 경로에서 쓰이지 않고 디코더 등 교체되지 않은 모듈에서만 쓰인다. `edit_pipeline.py:2` 의 `ATTN_BACKEND=sdpa` 는 그 밖의 dense 모듈에 적용된다. 이식본도 같은 호출을 그대로 쓴다(00 A5000 로그 `Attention: flash_attn` 은 sparse 모듈 import 시 출력)
 
-## 동등성 허용치 (요구사항서 6장)
+## 동등성 허용치 (요구사항서 6장 + 정오표 E14·E15)
 
 | 대상 | 합격 |
 |---|---|
-| Stage 1 coords | 완전 일치 |
-| Stage 2 feats (보존 셀) | 비트 동일 |
-| Stage 2 feats (편집 셀) | 같은 시드에서 **이식본(변경)–기준 차이가 기준–기준 차이 분포 안**(max\|Δ\|·평균 모두). 바닥값은 시나리오당 기준 3회 = 3쌍. 4.7e-2 는 상한 (정오표 E7) |
+| Stage 1 coords | 완전 일치 (필수, 시나리오별) |
+| Stage 2 feats (보존 셀) | 비트 동일 (필수, 시나리오별) |
+| Stage 2 feats (편집 셀) | **14건 합산 분포 비교**(E14): 변경–기준 쌍 vs 기준–기준 쌍(각 시나리오당 3쌍), max\|Δ\|·mean\|Δ\| 각각에 단측 순위 검정 p ≥ 0.05, 중앙값 비 ≤ 1.1, P(변경–기준 > 기준–기준) ≤ 0.6. **쌍별 mean\|Δ\| ≤ 3.2e-3**(E15). max 상한 4.7e-2 는 폐지 |
 | 보존 영역 청크 | 승계 바이트 동일 |
 | 테스트 | conformance 53/53, ai-ar-v3 서버 360 passed |
+
+- Stage 2 실행 간 차이의 원인은 TRELLIS `SparseDownsample` 의 `scatter_reduce(mean)`(`trellis/modules/sparse/spatial.py:36`)이다. 검증 전용 결정화 토글은 E16(기본 꺼짐).
+
+## 결과 변경 항목 판정 (요구사항서 6장 + 정오표 E18)
+
+- R_keep 소실 = 0(위반 시 결함). R_keep 신규: 시나리오별 ≤ max(기준 × 1.2, 기준 + 20), 14건 합계 ≤ 기준 합계 × 1.1.
+- 마스크 안 편집량(신규 + 소실) < 기준의 50% 인 시나리오는 효능 저하로 표시하고 육안 확인.
+- 렌더 지표(PSNR·SSIM·LPIPS 마스크 밖, Chamfer)·DINO-I·CLIP-T: 기준 3회 편차를 허용 범위로, 비교 설정 평균이 그 이상 나빠지지 않으면 통과 후보. 채택은 고객사가 육안 비교 후 결정.
+- 시나리오 표시(E12): A-C2 "조건 이미지 약함", A-S1 "마스크 밖 생성(알려진 결함)".
 
 - 비교 조건: 입력 SLat 을 고정한다(W34 SLat 재사용 입력, 또는 원저자 경로는 `--reuse_render`). 원저자 경로는 150뷰 렌더 잡음 때문에 회차마다 입력 SLat 이 달라 비교에 쓸 수 없다. 기준 구현은 래퍼에서 `run_edit` 직전 `torch.manual_seed(seed)`, 새 패키지는 요청의 seed 로 출발 잡음(포크 `edit_pipeline.py:512` 해당)을 만든다. 같은 seed 에서 두 출발 잡음이 비트 동일인지 테스트로 확인한다.
 
