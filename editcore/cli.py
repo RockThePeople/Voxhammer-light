@@ -20,8 +20,8 @@ def main(argv=None):
     ap.add_argument("--slat_out")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--timing")
-    ap.add_argument("--steps_s1", type=int, help="1번 E2a: Stage 1 스텝(기본 VHL_E2A_STEPS_S1 또는 25)")
-    ap.add_argument("--steps_s2", type=int, help="1번 E2a: Stage 2 스텝(기본 VHL_E2A_STEPS_S2 또는 25)")
+    ap.add_argument("--steps_s1", type=int, help="1번 E2a: Stage 1 스텝(기본 VHL_E2A_STEPS_S1 또는 15, E20)")
+    ap.add_argument("--steps_s2", type=int, help="1번 E2a: Stage 2 스텝(기본 VHL_E2A_STEPS_S2 또는 15, E20)")
     a = ap.parse_args(argv)
     t_proc = time.perf_counter()
 

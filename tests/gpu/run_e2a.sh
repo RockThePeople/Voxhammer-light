@@ -21,7 +21,7 @@ run1(){ cfg=$1; r=$2; j=$3; shift 3
   echo "$name $cfg $r rc=$? $(grep -o '\[e2a\] steps.*' "$d/$r.log" | head -1)"
 }
 if [ "$1" = offcheck ]; then
-  ( unset VHL_E2A_STEPS_S1 VHL_E2A_STEPS_S2; run1 off r1 "${jobs[0]}" )
+  ( export VHL_E2A_STEPS_S1=25 VHL_E2A_STEPS_S2=25; run1 off r1 "${jobs[0]}" )  # 0-1 과 같은 25 스텝(E20 뒤 기본은 15)
   exit 0
 fi
 cfg=$1; s1=$2; s2=$3

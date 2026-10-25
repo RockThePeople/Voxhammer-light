@@ -1,6 +1,6 @@
 """Inversion/denoising 샘플러 — 2차(Heun 류) solver, CFG 구간 [0.5, 1.0], rescale_t 3.0, W38 cfg=0 게이트.
 
-스텝 수는 1번 E2a 토글(`VHL_E2A_STEPS_S1`/`VHL_E2A_STEPS_S2`, 기본 25 = 0-1 과 같음)로 샘플러마다 정한다.
+스텝 수는 1번 E2a 토글(`VHL_E2A_STEPS_S1`/`VHL_E2A_STEPS_S2`, editcore 기본 15 = 정오표 E20)로 샘플러마다 정한다. 아래 STEPS 25 는 포크 값(포크 대조용 기본).
 같은 샘플러(같은 stage)의 inversion 과 denoising 은 같은 스텝 수를 쓰므로 캐시 키(t_latent)가 일치한다 —
 어긋나면 denoising 의 `latent[key]` 가 KeyError 로 멈춘다(조용히 넘어가지 않는다).
 

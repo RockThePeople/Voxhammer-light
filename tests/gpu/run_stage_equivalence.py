@@ -112,7 +112,7 @@ def run_port(pipe, req_paths, seed):
     from editcore.pipeline import Editor
     from editcore.service import load_request
     import editcore.pipeline as P
-    ed = Editor(pipe, derive_constants(pipe))
+    ed = Editor(pipe, derive_constants(pipe), steps_s1=25, steps_s2=25)  # 포크 대조: 포크와 같은 25 스텝(E20 뒤 기본 15)
     cap = {}
     o1i, o1d, o2i, o2d = ed.stage1_inverse, ed.stage1_denoise, ed.stage2_inverse, ed.stage2_denoise
 
