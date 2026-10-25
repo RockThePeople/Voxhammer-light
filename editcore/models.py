@@ -68,6 +68,11 @@ def load_pipeline(model_id: str = MODEL_ID, device: str = "cuda"):
     return pipe
 
 
+def r4_enabled():
+    """2번 R4 토글. `VHL_R4=1` 일 때만 mesh 만 디코딩 → `.cbin` 직행(기본 꺼짐 = 기존 GLB 출력)."""
+    return os.environ.get("VHL_R4", "") == "1"
+
+
 def ds_enabled():
     """정오표 E16 검증 전용 토글. `VHL_DS_DETERMINISTIC=1` 일 때만 켜진다(기본 꺼짐 = 원본 비결정 연산)."""
     return os.environ.get("VHL_DS_DETERMINISTIC", "") == "1"

@@ -20,6 +20,8 @@ def main(argv=None):
     ap.add_argument("--slat_out")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--timing")
+    ap.add_argument("--parent_cbin", help="2번 R4: 부모 .cbin 디렉터리(chunks/ 또는 *.cbin). 있으면 마스크∪halo 부기 밖 청크를 승계")
+    ap.add_argument("--cbin_out", help="2번 R4: .cbin 출력 디렉터리(기본 <--out 폴더>/cbin)")
     ap.add_argument("--steps_s1", type=int, help="1번 E2a: Stage 1 스텝(기본 VHL_E2A_STEPS_S1 또는 25)")
     ap.add_argument("--steps_s2", type=int, help="1번 E2a: Stage 2 스텝(기본 VHL_E2A_STEPS_S2 또는 25)")
     a = ap.parse_args(argv)
@@ -52,10 +54,27 @@ def main(argv=None):
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     if a.slat_out:
         save_slat(res.slat_tgt, a.slat_out, pipe.slat_normalization, {"seed": a.seed, "source": "editcore", "steps": editor.steps})
-    decode_to_glb(pipe, res.slat_tgt, a.out, hooks=hooks)
+    from .models import r4_enabled
+    dec_calls = {n: 0 for n in ("slat_decoder_gs", "slat_decoder_mesh")}
+    handles = [pipe.models[n].register_forward_hook(lambda *_, n=n: dec_calls.__setitem__(n, dec_calls[n] + 1))
+               for n in dec_calls if n in pipe.models]
+    r4 = None
+    if r4_enabled():
+        from .export import decode_to_cbin
+        mask_cells = json.loads(Path(a.mask_json).read_text())["mask"]["voxels"]
+        cdir = Path(a.cbin_out) if a.cbin_out else Path(a.out).parent / "cbin"
+        r4 = decode_to_cbin(pipe, res.slat_tgt, cdir, mask_cells=mask_cells, parent_dir=a.parent_cbin, glb_path=a.out, hooks=hooks)
+        print(f"[r4] VHL_R4=1 mesh-only → .cbin {cdir}: chunks {r4['chunks']} (새 {len(r4['sent'])}, 부모 승계 {len(r4['reused'])}, "
+              f"removed {len(r4['removed'])}, 부기 {len(r4['book'])}), 면 {r4['mesh']['faces']}, 바이트 {r4['total_bytes']}", flush=True)
+    else:
+        decode_to_glb(pipe, res.slat_tgt, a.out, hooks=hooks)
+    for h in handles:
+        h.remove()
+    print(f"[r4] decoder calls {dec_calls}", flush=True)
     cache_entries = {k: {"latent": len(v[0]), "kv": len(v[1])} for k, v in res.caches.items()}
     print(f"[e2a] cache entries {cache_entries}", flush=True)
-    out = {"counts": res.counts, "out": a.out, "seed": a.seed, "steps": editor.steps, "cache_entries": cache_entries}
+    out = {"counts": res.counts, "out": a.out, "seed": a.seed, "steps": editor.steps, "cache_entries": cache_entries,
+           "decoder_calls": dec_calls, "r4": r4}
     from .models import ds_enabled
     if ds_enabled():
         from .blocks import DeterministicSparseDownsample
