@@ -20,6 +20,8 @@ def main(argv=None):
     ap.add_argument("--slat_out")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--timing")
+    ap.add_argument("--steps_s1", type=int, help="1번 E2a: Stage 1 스텝(기본 VHL_E2A_STEPS_S1 또는 25)")
+    ap.add_argument("--steps_s2", type=int, help="1번 E2a: Stage 2 스텝(기본 VHL_E2A_STEPS_S2 또는 25)")
     a = ap.parse_args(argv)
     t_proc = time.perf_counter()
 
@@ -44,13 +46,16 @@ def main(argv=None):
 
     C = derive_constants(pipe)
     req = load_request(a.slat, a.mask_json, a.image_dir, seed=a.seed)
-    editor = Editor(pipe, C)
+    editor = Editor(pipe, C, steps_s1=a.steps_s1, steps_s2=a.steps_s2)
+    print(f"[e2a] steps s1={editor.steps['s1']} s2={editor.steps['s2']}", flush=True)
     res = editor.edit(req, hooks=hooks)
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     if a.slat_out:
-        save_slat(res.slat_tgt, a.slat_out, pipe.slat_normalization, {"seed": a.seed, "source": "editcore"})
+        save_slat(res.slat_tgt, a.slat_out, pipe.slat_normalization, {"seed": a.seed, "source": "editcore", "steps": editor.steps})
     decode_to_glb(pipe, res.slat_tgt, a.out, hooks=hooks)
-    out = {"counts": res.counts, "out": a.out, "seed": a.seed}
+    cache_entries = {k: {"latent": len(v[0]), "kv": len(v[1])} for k, v in res.caches.items()}
+    print(f"[e2a] cache entries {cache_entries}", flush=True)
+    out = {"counts": res.counts, "out": a.out, "seed": a.seed, "steps": editor.steps, "cache_entries": cache_entries}
     if meter:
         sampler.stop()
         segs = {}
@@ -66,7 +71,7 @@ def main(argv=None):
                    cache_bytes={k: {"latent": tensor_bytes(v[0]), "kv": tensor_bytes(v[1])} for k, v in res.caches.items()},
                    process_wall_seconds=time.perf_counter() - t_proc)
         Path(a.timing).write_text(json.dumps(out, indent=1, default=str))
-    print(json.dumps({k: out[k] for k in ("counts", "out", "seed")}))
+    print(json.dumps({k: out[k] for k in ("counts", "out", "seed", "steps", "cache_entries")}))
 
 
 if __name__ == "__main__":

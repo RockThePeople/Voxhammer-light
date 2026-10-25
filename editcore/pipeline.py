@@ -44,12 +44,17 @@ class EditResult:
 
 
 class Editor:
-    def __init__(self, pipeline, constants: Constants, rembg_session_factory=None):
+    def __init__(self, pipeline, constants: Constants, rembg_session_factory=None, steps_s1=None, steps_s2=None):
+        from .models import e2a_steps
         self.p = pipeline
         self.C = constants
         self.ss = SSFlow(pipeline.models["sparse_structure_flow_model"])
         self.slat = SlatFlow(pipeline.models["slat_flow_model"])
-        self.sampler = InversionSampler()
+        s1, s2 = e2a_steps(steps_s1, steps_s2)
+        # 1번 E2a: stage 마다 스텝 수(기본 25). 같은 stage 의 inversion·denoising 은 같은 샘플러를 쓴다
+        self.sampler_s1 = InversionSampler(s1)
+        self.sampler_s2 = InversionSampler(s2)
+        self.steps = {"s1": s1, "s2": s2}
         self._new_session = rembg_session_factory or (lambda: __import__("rembg").new_session("u2net"))
 
     # ── Stage 1 ──────────────────────────────────────────────────────────
@@ -59,7 +64,7 @@ class Editor:
         z_s = encoder(voxel_src)
         if cfg is None:
             cfg = self.p.sparse_structure_sampler_params["cfg_strength"]
-        noise, latent, kv = self.sampler.sample(self.ss, 1, z_s, cond_src, cfg, skip_step=skip_step, is_text=is_text)
+        noise, latent, kv = self.sampler_s1.sample(self.ss, 1, z_s, cond_src, cfg, skip_step=skip_step, is_text=is_text)
         return noise, latent, kv
 
     # origin: voxhammer/edit_pipeline.py:sample_sparse_structure_denoise @ f33cd96+patch
@@ -68,7 +73,7 @@ class Editor:
         if cfg is None:
             cfg = self.p.sparse_structure_sampler_params["cfg_strength"]
         noise_init = self.p.models["sparse_structure_encoder"](voxel_src) if re_init else None
-        z_s, latent, kv = self.sampler.sample(self.ss, 1, noise, cond_tgt, cfg, latent, latent_mask, kv,
+        z_s, latent, kv = self.sampler_s1.sample(self.ss, 1, noise, cond_tgt, cfg, latent, latent_mask, kv,
                                               self_kv_mask, cross_kv_mask, skip_step, noise_init, is_text=is_text)
         voxel = self.p.models["sparse_structure_decoder"](z_s)
         # Stage 1 voxel 병합: 마스크 밖은 원본 점유를 그대로
@@ -92,7 +97,7 @@ class Editor:
         slat_inverse = (slat_inverse - mean) / std
         if cfg is None:
             cfg = self.p.sparse_structure_sampler_params["cfg_strength"]
-        noise, latent, kv = self.sampler.sample(self.slat, 2, slat_inverse, cond_src, cfg, is_text=is_text)
+        noise, latent, kv = self.sampler_s2.sample(self.slat, 2, slat_inverse, cond_src, cfg, is_text=is_text)
         return latent, kv
 
     # origin: voxhammer/edit_pipeline.py:sample_slat_denoise @ f33cd96+patch
@@ -105,7 +110,7 @@ class Editor:
         noise = sp.SparseTensor(feats=noise_feats.to(self.p.device), coords=coords_tgt)
         if cfg is None:
             cfg = self.p.sparse_structure_sampler_params["cfg_strength"]
-        slat, latent, kv = self.sampler.sample(self.slat, 2, noise, cond_tgt, cfg, latent, coords_mask, kv,
+        slat, latent, kv = self.sampler_s2.sample(self.slat, 2, noise, cond_tgt, cfg, latent, coords_mask, kv,
                                                self_kv_mask, cross_kv_mask, is_text=is_text)
         std, mean = self._norm()
         slat = slat * std + mean

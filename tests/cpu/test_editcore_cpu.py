@@ -80,7 +80,7 @@ def test_cache_keys_and_schedule(ep):
     """inversion 키(t_prev) 집합 == denoising 키(t_curr) 집합, 스텝 25, rescale_t 3.0."""
     from editcore.cache import kv_key
     from editcore.sampler import InversionSampler, STEPS, RESCALE_T, CFG_INTERVAL
-    t, steps = InversionSampler.t_seq(0)
+    t, steps = InversionSampler().t_seq(0)
     ref = np.linspace(1, 0, 26)
     ref = 3.0 * ref / (1 + 2.0 * ref)
     assert steps == 25 == STEPS and RESCALE_T == 3.0 and CFG_INTERVAL == (0.5, 1.0) and np.array_equal(t, ref)

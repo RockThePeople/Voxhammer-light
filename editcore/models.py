@@ -63,3 +63,11 @@ def load_pipeline(model_id: str = MODEL_ID, device: str = "cuda"):
     if device == "cuda":
         pipe.cuda()
     return pipe
+
+
+def e2a_steps(cli_s1=None, cli_s2=None):
+    """1번 E2a 스텝 수. CLI 인자 > 환경변수 `VHL_E2A_STEPS_S1/S2` > 기본 25(꺼짐 = 0-1 과 같음)."""
+    def one(cli, env):
+        v = cli if cli is not None else os.environ.get(env)
+        return 25 if v in (None, "") else int(v)
+    return one(cli_s1, "VHL_E2A_STEPS_S1"), one(cli_s2, "VHL_E2A_STEPS_S2")

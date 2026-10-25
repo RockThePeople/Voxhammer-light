@@ -1,4 +1,8 @@
-"""Inversion/denoising 샘플러 — 2차(Heun 류) solver, CFG 구간 [0.5, 1.0], rescale_t 3.0, 25 스텝, W38 cfg=0 게이트.
+"""Inversion/denoising 샘플러 — 2차(Heun 류) solver, CFG 구간 [0.5, 1.0], rescale_t 3.0, W38 cfg=0 게이트.
+
+스텝 수는 1번 E2a 토글(`VHL_E2A_STEPS_S1`/`VHL_E2A_STEPS_S2`, 기본 25 = 0-1 과 같음)로 샘플러마다 정한다.
+같은 샘플러(같은 stage)의 inversion 과 denoising 은 같은 스텝 수를 쓰므로 캐시 키(t_latent)가 일치한다 —
+어긋나면 denoising 의 `latent[key]` 가 KeyError 로 멈춘다(조용히 넘어가지 않는다).
 
 `runner` 는 blocks.SSFlow / blocks.SlatFlow (호출 규약 runner(x, t, cond, ctx)).
 """
@@ -10,12 +14,17 @@ from tqdm import tqdm
 
 from .cache import EditContext
 
-STEPS = 25
+STEPS = 25  # 기본값(포크 edit_pipeline.py:409)
 RESCALE_T = 3.0
 CFG_INTERVAL = (0.5, 1.0)
 
 
 class InversionSampler:
+    def __init__(self, steps: int = STEPS):
+        if int(steps) < 1:
+            raise ValueError(f"steps={steps}")
+        self.steps = int(steps)
+
     # origin: voxhammer/edit_pipeline.py:InversionFlowEulerGuidanceIntervalSampler._inference_model @ f33cd96+patch
     @staticmethod
     def _inference_model(runner, sample, t, cond, ctx: EditContext):
@@ -47,9 +56,8 @@ class InversionSampler:
         first_order = (pred_mid - pred) / ((t_prev - t_curr) / 2)
         return sample + (t_prev - t_curr) * pred - 0.5 * (t_prev - t_curr) ** 2 * first_order
 
-    @staticmethod
-    def t_seq(skip_step=None):
-        steps = STEPS
+    def t_seq(self, skip_step=None):
+        steps = self.steps
         t = np.linspace(1, 0, steps + 1)
         t = RESCALE_T * t / (1 + (RESCALE_T - 1) * t)
         if skip_step is not None:
