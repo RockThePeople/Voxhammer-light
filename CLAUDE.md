@@ -55,7 +55,7 @@ VoxHammer(f33cd96 + 기준 패치) 기반 3D 편집 1회의 벽시계 시간을 
 - **반드시 보존할 동작** (어긋나면 결과가 바뀐다):
   - 캐시 키: inversion `t_prev`, denoising `t_curr` → 같은 `t_latent`
   - 2차 solver order 1·2 분리 캐시
-  - CFG 구간 [0.5, 1.0], `rescale_t` 3.0, 스텝 25, W38 cfg=0 게이트
+  - CFG 구간 [0.5, 1.0], `rescale_t` 3.0, W38 cfg=0 게이트. 스텝은 포크 25, **editcore 기본 15/15**(E2a 채택, 정오표 E20). inversion·denoising 같은 스텝
   - Stage 1 voxel 병합, Stage 2 보존 feats 최종 덮어쓰기
   - D51 정수 부호화 보존 판정, Stage 2 inversion 은 보존 좌표로 자른 SLat
   - 공동 bbox crop, 이미지 패치 마스크 CLS·register 5토큰 처리
@@ -72,13 +72,14 @@ VoxHammer(f33cd96 + 기준 패치) 기반 3D 편집 1회의 벽시계 시간을 
 | 보존 영역 청크 | 승계 바이트 동일 |
 | 테스트 | conformance 53/53, ai-ar-v3 서버 360 passed |
 
+- **비교 기준(E20 이후):** editcore 15 스텝. 기준–기준 바닥값은 E2a c15 r1–r3(14건 × 3쌍). 0-1·F-5 의 25 스텝 값은 포크 대조에만 쓴다.
 - Stage 2 실행 간 차이의 원인은 TRELLIS `SparseDownsample` 의 `scatter_reduce(mean)`(`trellis/modules/sparse/spatial.py:36`)이다. 검증 전용 결정화 토글은 E16(기본 꺼짐).
 
-## 결과 변경 항목 판정 (요구사항서 6장 + 정오표 E18)
+## 결과 변경 항목 판정 (요구사항서 6장 + 정오표 E18·E19)
 
 - R_keep 소실 = 0(위반 시 결함). R_keep 신규: 시나리오별 ≤ max(기준 × 1.2, 기준 + 20), 14건 합계 ≤ 기준 합계 × 1.1.
 - 마스크 안 편집량(신규 + 소실) < 기준의 50% 인 시나리오는 효능 저하로 표시하고 육안 확인.
-- 렌더 지표(PSNR·SSIM·LPIPS 마스크 밖, Chamfer)·DINO-I·CLIP-T: 기준 3회 편차를 허용 범위로, 비교 설정 평균이 그 이상 나빠지지 않으면 통과 후보. 채택은 고객사가 육안 비교 후 결정.
+- 렌더 지표·DINO-I·CLIP-T 절대 허용치(정오표 E19): 시나리오별 Δ PSNR ≥ −0.5 dB, SSIM ≥ −0.003, LPIPS ≤ +0.005, DINO-I ≥ −0.015, CLIP-T ≥ −0.015, Chamfer ≤ +0.002. 14건 평균 PSNR ≥ −0.2 dB, DINO-I ≥ −0.005, CLIP-T ≥ −0.005. 넘은 칸은 육안 시트로 확인하고 개선 칸 수도 적는다. 채택은 고객사.
 - 시나리오 표시(E12): A-C2 "조건 이미지 약함", A-S1 "마스크 밖 생성(알려진 결함)".
 
 - 비교 조건: 입력 SLat 을 고정한다(W34 SLat 재사용 입력, 또는 원저자 경로는 `--reuse_render`). 원저자 경로는 150뷰 렌더 잡음 때문에 회차마다 입력 SLat 이 달라 비교에 쓸 수 없다. 기준 구현은 래퍼에서 `run_edit` 직전 `torch.manual_seed(seed)`, 새 패키지는 요청의 seed 로 출발 잡음(포크 `edit_pipeline.py:512` 해당)을 만든다. 같은 seed 에서 두 출발 잡음이 비트 동일인지 테스트로 확인한다.

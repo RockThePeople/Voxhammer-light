@@ -56,6 +56,11 @@ def main(argv=None):
     cache_entries = {k: {"latent": len(v[0]), "kv": len(v[1])} for k, v in res.caches.items()}
     print(f"[e2a] cache entries {cache_entries}", flush=True)
     out = {"counts": res.counts, "out": a.out, "seed": a.seed, "steps": editor.steps, "cache_entries": cache_entries}
+    from .models import ds_enabled
+    if ds_enabled():
+        from .blocks import DeterministicSparseDownsample
+        out["ds"] = {"enabled": True, "deterministic_downsample_calls": DeterministicSparseDownsample.calls}
+        print(f"[ds] deterministic downsample calls {DeterministicSparseDownsample.calls}", flush=True)
     if meter:
         sampler.stop()
         segs = {}
