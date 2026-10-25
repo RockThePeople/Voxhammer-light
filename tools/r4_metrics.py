@@ -94,7 +94,8 @@ def equiv_phase():
         if not on:
             continue
         pick = lambda v: {"coords_equal": v["coords_equal"], "preserved_bit_equal": v["preserved"].get("bit_equal"),
-                          "max": v["edited"].get("max_abs_diff"), "mean": v["edited"].get("mean_abs_diff")}
+                          "max": v["edited"].get("max_abs_diff"), "mean": v["edited"].get("mean_abs_diff"),
+                          "edited_cells": v["edited"].get("cells")}
         c = {r: pick(compare(on[r], off[r], s["slat"], s["mask"])) for r in on}
         b = {f"{x}-{y}": pick(compare(off[x], off[y], s["slat"], s["mask"])) for x, y in itertools.combinations(RUN_IDS, 2)}
         rows[s["id"]] = {"change_base": c, "base_base": b,
