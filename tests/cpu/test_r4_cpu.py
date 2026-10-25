@@ -104,15 +104,18 @@ def test_inherit_outside_book(tmp_path):
     res = write_cbin(tmp_path / "out", cb, cc, book=book, parent_dir=parent)
     out = tmp_path / "out" / "chunks"
     for k in keys:
+        if k not in book and k not in pb:                 # 변경 집합 밖·부모에 없음 → 쓰지 않는다(R11)
+            assert not (out / f"{k}.cbin").exists() and k in res["omitted_outside"]
+            continue
         b = (out / f"{k}.cbin").read_bytes()
         if k not in book and k in pb and k not in cb:
             continue
-        if k in book or k not in pb:                      # 부기 안, 또는 부모에 없던 청크 → 새 바이트
+        if k in book:                                     # 변경 집합 안 → 새 바이트
             assert b == cb[k] and k in res["sent"]
         else:
             assert b == pb[k] and k in res["reused"]      # 부기 밖 = 부모 바이트 그대로
     man = json.loads((tmp_path / "out" / "manifest.json").read_text())["chunks"]
-    assert set(man) == set(keys) | {k for k in pb if k not in book}
+    assert set(man) == (set(keys) & (book | set(pb))) | {k for k in pb if k not in book}
     assert res["reused"], "부기 밖 승계가 한 건도 없으면 이 테스트는 아무것도 안 잰다"
     for k, e in man.items():                              # manifest ↔ 실제 바이트 ↔ 계약 디코더
         b = (out / f"{k}.cbin").read_bytes()
@@ -197,3 +200,20 @@ def test_vertex_color_render_glb():
     boff = 20 + struct.unpack("<I", out[12:16])[0] + 8
     c = np.frombuffer(out, np.float32, acc["count"] * 4, boff + bv["byteOffset"]).reshape(-1, 4)
     assert np.allclose(c[0, :3], [0.2158605, 0.0030353, 1.0], atol=1e-5)   # sRGB 128/255, 10/255, 1 → 선형
+
+
+def test_bookkeeping_precompute_same_result(tmp_path):
+    """부기 선행 계산(Future)을 넘겨도 변경·승계·생략 청크 집합이 같다(결과 무영향)."""
+    from editcore.export import bookkeeping_async, decode_to_cbin, mesh_to_chunks
+    v, f, attrs = _grid_mesh()
+    pb, _, _ = mesh_to_chunks(_Pipe(v, f, attrs), _slat([[1, 1, 1]]))
+    (tmp_path / "p" / "chunks").mkdir(parents=True)
+    for k, b in pb.items():
+        (tmp_path / "p" / "chunks" / f"{k}.cbin").write_bytes(b)
+    v2 = v.copy(); v2[:, 2] += 0.0005
+    mask = np.array([[30, 30, 32], [31, 31, 32]])
+    kw = dict(mask_cells=mask, parent_dir=tmp_path / "p", parent_cells=np.array([[1, 1, 1]]))
+    a = decode_to_cbin(_Pipe(v2, f, attrs), _slat([[1, 1, 1], [40, 40, 32]]), tmp_path / "a", **kw)
+    b = decode_to_cbin(_Pipe(v2, f, attrs), _slat([[1, 1, 1], [40, 40, 32]]), tmp_path / "b", book=bookkeeping_async(mask, 2), **kw)
+    for k in ("sent", "reused", "removed", "omitted_outside"):
+        assert a[k] == b[k]

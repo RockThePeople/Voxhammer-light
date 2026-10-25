@@ -114,15 +114,19 @@ def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="
     pdir = Path(parent_dir) if parent_dir else None
     parent = {p.stem.split(".")[0]: p for p in sorted((pdir / "chunks" if (pdir / "chunks").is_dir() else pdir).glob("*.cbin"))} if pdir else {}
     book = set(book or [])
-    final, sent, reused = {}, [], []
+    final, sent, reused, omitted = {}, [], [], []
     with span("bookkeeping", 7) if span else _null():
         for k in sorted(set(blobs) | {k for k in parent if k not in book}):
             if pdir is not None and k in parent and k not in book:
                 final[k] = ("parent", parent[k].read_bytes())
                 reused.append(k)
-            elif k in blobs:
+            elif k in blobs and (pdir is None or k in book):
                 final[k] = ("fresh", blobs[k])
                 sent.append(k)
+            elif k in blobs:
+                # 변경 집합 밖인데 부모에 기하가 없던 청크: 삼각형이 무게중심으로 배정돼 점유 셀 없는 이웃 청크에 생긴 것.
+                # 부기 밖·점유 같음 → 바뀌지 않는다(R11) → 쓰지 않는다(chief 검토 2026-10-26).
+                omitted.append(k)
         removed = sorted(k for k in book if k in parent and k not in final)
     with span("cbin_write", 7) if span else _null():
         entries = {}
@@ -134,21 +138,33 @@ def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="
                                     voxel_count=int(cm.voxel_count), version=int(version))
         man = ChunkManifest(asset_id=asset_id, version=int(version), chunks=entries)
         (out_dir / "manifest.json").write_text(man.model_dump_json(indent=2))
-    return {"chunks": len(final), "sent": sent, "reused": reused, "removed": removed, "book": sorted(book),
+    return {"chunks": len(final), "sent": sent, "reused": reused, "removed": removed, "omitted_outside": omitted, "book": sorted(book),
             "sent_bytes": int(sum(len(final[k][1]) for k in sent)), "total_bytes": int(sum(len(v[1]) for v in final.values())),
             "parent_dir": str(pdir) if pdir else None}
 
 
+def bookkeeping_async(mask_cells, halo=2):
+    """부기 선행 계산(chief 검토 2026-10-26, 결과 무영향): 입력이 마스크뿐이라 편집 시작 때 별도 스레드로 먼저 계산한다.
+    구간 7 에서는 `decode_to_cbin(book=<Future>)` 로 결과만 받는다. 계산 자체(dilate_cells, E2)는 `bookkeeping` 그대로."""
+    from concurrent.futures import ThreadPoolExecutor
+    ex = ThreadPoolExecutor(max_workers=1, thread_name_prefix="r4-book")
+    fut = ex.submit(bookkeeping, mask_cells, halo)
+    ex.shutdown(wait=False)
+    return fut
+
+
 def decode_to_cbin(pipeline, slat_tgt, out_dir, *, mask_cells=None, parent_dir=None, parent_cells=None, halo=2,
-                   glb_path=None, hooks=None):
+                   glb_path=None, hooks=None, book=None):
     """R4 진입점. `out_dir/chunks/*.cbin`·`manifest.json`·`r4.json`, 그리고 glb_path 가 있으면 `.cbin` 에서 조립한
     정점색 GLB(ai-ar-v3 `server/glbbuild.build_glb`, 렌더·뷰어 입력)를 쓴다.
     변경 청크 = 부기(마스크 ∪ halo) ∪ 점유 변경(parent_cells 가 있으면, R11 — chief 정정 2026-10-26). 나머지는 부모 승계."""
     blobs, chunks, info = mesh_to_chunks(pipeline, slat_tgt, hooks=hooks)
     span = (hooks or {}).get("span")
-    book, occ = set(), set()
+    pre, book, occ = book, set(), set()
     with span("bookkeeping", 7) if span else _null():
-        if mask_cells is not None and parent_dir:
+        if pre is not None and parent_dir:      # 선행 계산 결과(Future 또는 집합)를 받기만 한다
+            book = set(pre.result() if hasattr(pre, "result") else pre)
+        elif mask_cells is not None and parent_dir:
             book = bookkeeping(mask_cells, halo)
         if parent_cells is not None and parent_dir:
             occ = occupancy_changed_chunks(parent_cells, slat_tgt.coords[:, 1:].detach().cpu().numpy())

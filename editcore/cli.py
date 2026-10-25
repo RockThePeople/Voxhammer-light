@@ -50,6 +50,11 @@ def main(argv=None):
     req = load_request(a.slat, a.mask_json, a.image_dir, seed=a.seed)
     editor = Editor(pipe, C, steps_s1=a.steps_s1, steps_s2=a.steps_s2)
     print(f"[e2a] steps s1={editor.steps['s1']} s2={editor.steps['s2']}", flush=True)
+    from .models import r4_enabled
+    book_future = None
+    if r4_enabled() and a.parent_cbin:   # R4: 부기는 마스크만 입력이라 편집 시작 때 선행 계산(결과 무영향)
+        from .export import bookkeeping_async
+        book_future = bookkeeping_async(json.loads(Path(a.mask_json).read_text())["mask"]["voxels"], 2)
     res = editor.edit(req, hooks=hooks)
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     if a.slat_out:
@@ -67,7 +72,7 @@ def main(argv=None):
         with safe_open(a.slat, "np") as f:   # R11 점유 비교의 부모 = 입력 SLat
             parent_cells = f.get_tensor("coords")[:, 1:]
         r4 = decode_to_cbin(pipe, res.slat_tgt, cdir, mask_cells=mask_cells, parent_dir=a.parent_cbin, parent_cells=parent_cells,
-                            glb_path=a.out, hooks=hooks)
+                            glb_path=a.out, hooks=hooks, book=book_future)
         print(f"[r4] VHL_R4=1 mesh-only → .cbin {cdir}: chunks {r4['chunks']} (새 {len(r4['sent'])}, 부모 승계 {len(r4['reused'])}, "
               f"removed {len(r4['removed'])}, 부기 {r4['book_existing']}, 점유 변경으로만 {r4['occupancy_only_added']}), 면 {r4['mesh']['faces']}, 바이트 {r4['total_bytes']}", flush=True)
     else:
