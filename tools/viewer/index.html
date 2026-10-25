@@ -28,11 +28,15 @@
   .chips { margin-top:4px; display:flex; flex-wrap:wrap; gap:4px; }
   .chip { font-size:11px; padding:1px 6px; border:1px solid var(--line); border-radius:10px; color:var(--muted); }
   #empty { padding:40px 16px; color:var(--muted); }
+  .tabs a { padding:5px 10px; border:1px solid var(--line); border-radius:6px; text-decoration:none; color:var(--fg); }
+  .tabs a.on { background:var(--fg); color:var(--bg); }
+  .tag { font-size:11px; padding:1px 6px; border-radius:10px; background:#ffe2d6; color:#8a2b00; }
 </style>
 </head>
 <body>
 <header>
   <h1>VHL 결과 목록</h1>
+  <nav class="tabs"><a href="/" id="tabItems">결과 폴더</a> <a href="/?tab=scenarios" id="tabScen">시나리오</a></nav>
   <input type="search" id="q" placeholder="경로·파일명 검색 (예: track_a, rider-head, output.glb)">
   <select id="root"></select>
   <button id="refresh" title="폴더를 다시 훑는다">새로고침</button>
@@ -159,7 +163,34 @@ rootSel.addEventListener('change', render);
 document.getElementById('refresh').addEventListener('click', () => load(true));
 try { q.value = sessionStorage.getItem('vhl_q') || ''; } catch (e) {}
 q.addEventListener('change', () => { try { sessionStorage.setItem('vhl_q', q.value); } catch (e) {} });
-load(false);
+// 시나리오 탭(T1): scenario_prep.py 캐시의 16건을 조건 이미지(2d_edit) 썸네일로 보여 준다.
+async function loadScenarios() {
+  ['q', 'root', 'refresh'].forEach((i) => (document.getElementById(i).hidden = true));
+  const data = await (await fetch('/api/scenarios')).json();
+  const list = data.scenarios || [];
+  document.getElementById('count').textContent = `시나리오 ${list.length}건` + (data.built ? ` · 캐시 ${data.built}` : '') + (data.error ? ` · ${data.error}` : '');
+  document.getElementById('empty').hidden = list.length > 0;
+  grid.innerHTML = '';
+  for (const s of list) {
+    const a = document.createElement('a');
+    a.className = 'card';
+    a.href = `/scenario/${encodeURIComponent(s.id)}`;
+    const img = s.thumb ? `<img loading="lazy" src="/sfile?id=${encodeURIComponent(s.id)}&key=cond:${s.thumb}" alt="">` : '조건 이미지 없음';
+    a.innerHTML = `<div class="thumb">${img}</div><div class="meta"><div class="title"></div><div class="sub"></div></div>`;
+    a.querySelector('.title').textContent = s.title;
+    a.querySelector('.sub').textContent = `트랙 ${s.track}` + (s.alignment ? ` · 정렬 ${(100 * s.alignment.within_1cell).toFixed(1)}%` : '');
+    if (s.e12) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = s.e12; a.querySelector('.meta').append(t); }
+    grid.append(a);
+  }
+}
+
+if (new URLSearchParams(location.search).get('tab') === 'scenarios') {
+  document.getElementById('tabScen').classList.add('on');
+  loadScenarios();
+} else {
+  document.getElementById('tabItems').classList.add('on');
+  load(false);
+}
 </script>
 </body>
 </html>

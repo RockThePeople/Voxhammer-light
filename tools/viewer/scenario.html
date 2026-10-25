@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시나리오 비교</title>
+<style>
+  :root { --bg: #f4f4f6; --fg: #1d1d22; --mut: #6b6b75; --line: #d8d8de; --card: #fff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+  header.top { padding: 10px 16px; background: var(--card); border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  header.top a { color: #2a5bd7; text-decoration: none; }
+  h1 { font-size: 18px; margin: 0; }
+  section { margin: 12px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  section h2 { font-size: 15px; margin: 0 0 8px; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; }
+  .kv b { color: var(--mut); font-weight: 500; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 10px; background: #ffe2d6; color: #8a2b00; font-size: 12px; }
+  .conds { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .conds figure { margin: 0; }
+  .conds img, .conds canvas { width: 100%; aspect-ratio: 1; object-fit: contain; background: #fff; border: 1px solid var(--line); cursor: zoom-in; display: block; }
+  .conds figcaption { font-size: 12px; color: var(--mut); }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-bottom: 8px; }
+  .bar button { padding: 3px 9px; border: 1px solid var(--line); background: #fafafa; border-radius: 5px; cursor: pointer; }
+  .bar button.on { background: #1d1d22; color: #fff; }
+  .panels { display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 8px; }
+  .panel { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #fff; }
+  .panel .ph { display: flex; gap: 6px; padding: 4px 6px; align-items: center; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .panel .ph select { font-size: 12px; }
+  .panel .ph .x { margin-left: auto; cursor: pointer; color: var(--mut); }
+  .panel canvas { display: block; width: 100%; aspect-ratio: 1; }
+  .panel .legend { font-size: 11px; padding: 3px 6px; color: var(--mut); min-height: 18px; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 3px; }
+  table { border-collapse: collapse; font-size: 12px; }
+  th, td { border: 1px solid var(--line); padding: 3px 6px; text-align: right; }
+  th { background: #f0f0f3; }
+  td.l, th.l { text-align: left; }
+  td.bad { background: #ffd9d9; font-weight: 600; }
+  td.good { background: #e3f6e3; }
+  tr.sel td { background: #fff4c2; }
+  .comps { max-height: 260px; overflow: auto; display: inline-block; }
+  .note { color: var(--mut); font-size: 12px; }
+  body.capture { background: #00ff00; }
+  body.capture > *:not(#capture) { display: none !important; }
+  #capture { display: none; }
+  body.capture #capture { display: block; width: 1024px; height: 1024px; }
+  body.only3d header.top, body.only3d #sec-head, body.only3d #sec-cond, body.only3d #sec-metrics, body.only3d #sec-comps { display: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<header class="top"><a href="/">← 목록</a><a href="/?tab=scenarios">시나리오 목록</a><h1 id="title">시나리오</h1><span id="tags"></span></header>
+
+<section id="sec-head"><h2>머리말</h2><div class="kv" id="head"></div></section>
+
+<section id="sec-cond"><h2>조건 이미지 (동결, 1024²) — 누르면 원래 크기</h2><div class="conds" id="conds"></div></section>
+
+<section id="sec-3d">
+  <h2>3D 비교 — 카메라 연동(한 칸을 돌리면 모두 같이 돈다)</h2>
+  <div class="bar" id="camBar"></div>
+  <div class="bar" id="ovBar"></div>
+  <div class="panels" id="panels"></div>
+  <div class="note" id="note3d"></div>
+</section>
+
+<section id="sec-comps"><h2>R_keep 신규(마스크 ∪ halo 밖) 성분 — <span id="compsFor"></span></h2>
+  <div class="note">거리 = 마스크 ∪ halo 2 까지 최단 셀 수(체비셰프 = 26-이웃 걸음, 1 = 맞닿음). 9a 대상 = 모든 새 셀을 26-이웃 성분으로 묶었을 때 마스크 ∪ halo 와 닿지 않는 성분(정오표 E17). 행을 누르면 그 성분만 강조.</div>
+  <div class="comps"><table id="comps"></table></div>
+</section>
+
+<section id="sec-metrics"><h2>수치</h2><div id="metrics"></div></section>
+
+<div id="capture"></div>
+<script type="module" src="/scenario.js"></script>
+</body>
+</html>

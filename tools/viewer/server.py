@@ -14,6 +14,9 @@ GLB 가 들어 있는 폴더 하나를 "항목" 하나로 본다. 목록 페이�
 환경변수: VHL_VIEWER_PORT(기본 8083), VHL_VIEWER_ROOTS(':' 구분, 있으면 기본 루트 대신 사용),
 VHL_VIEWER_CACHE(썸네일 캐시, 기본 <RUNS_DIR 또는 저장소>/.viewer_cache).
 결과에 영향이 없는 보기 전용 도구다. 파일을 고치거나 지우지 않는다(썸네일 캐시 쓰기만).
+
+T1 시나리오 페이지 `/scenario/<ID>`: `scenario_prep.py`(CPU)가 미리 만든 `<캐시>/scenario/` 를 읽어
+조건 이미지·연동 3D 비교·복셀 겹치기·수치 표를 보여 준다. 시나리오 파일은 meta.json 에 오른 경로만 내준다.
 """
 from __future__ import annotations
 
@@ -144,8 +147,53 @@ class Catalog:
         return p if p.is_file() else None
 
 
+class Scenarios:
+    """`scenario_prep.py` 가 만든 캐시(index.json·<ID>/meta.json·<ID>/<설정>/<회차>.json)를 읽는다."""
+
+    def __init__(self, root: Path):
+        self.root = root
+
+    def _json(self, p: Path):
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+
+    def index(self):
+        return self._json(self.root / "index.json") or {"scenarios": [], "error": "캐시 없음 — scenario_prep.py 를 먼저 돌린다"}
+
+    def meta(self, sid: str):
+        if not sid or "/" in sid or sid.startswith("."):
+            return None
+        return self._json(self.root / sid / "meta.json")
+
+    def vox(self, sid: str, cfg: str, run: str):
+        m = self.meta(sid)
+        if not m or cfg not in m["runs"] or run not in m["runs"][cfg]:
+            return None
+        return self._json(self.root / sid / m["runs"][cfg][run]["vox"])
+
+    def file(self, sid: str, key: str) -> Path | None:
+        """meta.json 에 오른 파일만: cond:<이름>, src_glb, glb:<설정>:<회차>."""
+        m = self.meta(sid)
+        if not m:
+            return None
+        kind, _, rest = key.partition(":")
+        p = None
+        if kind == "cond":
+            p = m["cond"].get(rest)
+        elif kind == "src_glb":
+            p = m["src_glb"]
+        elif kind == "glb":
+            cfg, _, run = rest.partition(":")
+            p = m["runs"].get(cfg, {}).get(run, {}).get("glb")
+        p = Path(p) if p else None
+        return p if p and p.is_file() else None
+
+
 class Handler(BaseHTTPRequestHandler):
     catalog: Catalog = None  # type: ignore[assignment]
+    scen: Scenarios = None  # type: ignore[assignment]
     server_version = "vhl-viewer/1"
 
     def log_message(self, fmt, *args):  # 접근 로그는 짧게
@@ -199,6 +247,21 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(HERE / "view.html")
         if path == "/common.js":
             return self._file(HERE / "common.js")
+        if path == "/scenario.js":
+            return self._file(HERE / "scenario.js")
+        if path.startswith("/scenario/"):
+            return self._file(HERE / "scenario.html")
+        if path == "/api/scenarios":
+            return self._json(self.scen.index())
+        if path == "/api/scenario":
+            m = self.scen.meta(q.get("id", [""])[0])
+            return self._json(m) if m else self._json({"error": "not found"}, 404)
+        if path == "/api/scenario_vox":
+            v = self.scen.vox(q.get("id", [""])[0], q.get("cfg", [""])[0], q.get("run", [""])[0])
+            return self._json(v) if v else self._json({"error": "not found"}, 404)
+        if path == "/sfile":
+            p = self.scen.file(q.get("id", [""])[0], q.get("key", [""])[0])
+            return self._file(p) if p else self._send(404, b"not found", "text/plain")
         if path == "/api/items":
             return self._json({"roots": [str(r) for r in self.catalog.roots],
                                "items": self.catalog.items(force="refresh" in q)})
@@ -264,6 +327,7 @@ def main() -> int:
     cache = Path(a.cache).expanduser() if a.cache else base / ".viewer_cache"
 
     Handler.catalog = Catalog(roots, cache)
+    Handler.scen = Scenarios(cache / "scenario")
     n = len(Handler.catalog.items(force=True))
     print(f"viewer: http://{a.host}:{a.port}/  항목 {n}개, 루트 {[str(r) for r in roots]}, 썸네일 캐시 {cache}", flush=True)
     ThreadingHTTPServer((a.host, a.port), Handler).serve_forever()

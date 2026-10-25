@@ -92,3 +92,37 @@ export async function renderThumb(url, w = 320, h = 240) {
   });
   return blob;
 }
+
+// ── T1 시나리오 페이지: 좌표 변환·카메라는 이 두 함수에서만 한다 ──────────────────────────────
+// 셀 (i,j,k) → TRELLIS 복셀 프레임 ((i,j,k)+0.5)/64 − 0.5 → glTF(Y-up) (x, z, −y) → 시나리오 정규화 (p − c) × s.
+// xf = meta.xf {center:[cx,cy,cz](glTF 프레임), scale}. 트랙 B 는 항등(Bench 프레임). scenario_prep.py:cells_to_world 와 같은 식.
+export function voxelToWorld(flatCells, xf) {
+  const n = flatCells.length / 3, out = new Float32Array(n * 3);
+  const [cx, cy, cz] = xf.center, s = xf.scale;
+  for (let t = 0; t < n; t++) {
+    const x = (flatCells[3 * t] + 0.5) / 64 - 0.5, y = (flatCells[3 * t + 1] + 0.5) / 64 - 0.5, z = (flatCells[3 * t + 2] + 0.5) / 64 - 0.5;
+    out[3 * t] = (x - cx) * s; out[3 * t + 1] = (z - cy) * s; out[3 * t + 2] = (-y - cz) * s;
+  }
+  return out;
+}
+
+// 결과 GLB(to_glb 원 프레임)를 같은 정규화로 놓는다: p' = (p − c) × s.
+export function placeNormalized(obj, xf) {
+  obj.scale.setScalar(xf.scale);
+  obj.position.set(-xf.center[0] * xf.scale, -xf.center[1] * xf.scale, -xf.center[2] * xf.scale);
+}
+
+// 포크 조건 렌더 카메라(utils/render_rgb_and_mask.py + bpyrenderer 기본값): 반지름 1.8, 고도 15°,
+// 방위 [90,45,0,315,270][v] − 90, 원점 주시, 세로 화각 49.13°(센서 32 mm·렌즈 35 mm, 정사각).
+// Blender(Z-up) (x,y,z) → three/glTF(Y-up) (x, z, −y).
+export const FORK_FOV = 2 * Math.atan(16 / 35) * 180 / Math.PI;
+export function forkCamera(camera, view, cam = { radius: 1.8, elev_deg: 15, azimuth_deg: [90, 45, 0, 315, 270], azimuth_offset_deg: -90 }) {
+  const el = cam.elev_deg * Math.PI / 180, az = (cam.azimuth_deg[view] + cam.azimuth_offset_deg) * Math.PI / 180;
+  const bx = cam.radius * Math.cos(el) * Math.cos(az), by = cam.radius * Math.cos(el) * Math.sin(az), bz = cam.radius * Math.sin(el);
+  camera.fov = FORK_FOV;
+  camera.position.set(bx, bz, -by);
+  camera.up.set(0, 1, 0);
+  camera.lookAt(0, 0, 0);
+  camera.near = 0.01; camera.far = 100;
+  camera.updateProjectionMatrix();
+}
