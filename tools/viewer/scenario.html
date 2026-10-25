@@ -44,7 +44,16 @@
   body.capture > *:not(#capture) { display: none !important; }
   #capture { display: none; }
   body.capture #capture { display: block; width: 1024px; height: 1024px; }
-  body.only3d header.top, body.only3d #sec-head, body.only3d #sec-cond, body.only3d #sec-metrics, body.only3d #sec-comps { display: none; }
+  body.only3d header.top, body.only3d #sec-head, body.only3d #sec-flow, body.only3d #sec-metrics, body.only3d #sec-comps { display: none; }
+  .flow { display: grid; grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr) 28px minmax(0, 1fr); gap: 8px; align-items: start; }
+  .flow .arrow { align-self: center; text-align: center; font-size: 26px; color: var(--mut); }
+  .flow .card { border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: #fff; }
+  .flow .card h3 { font-size: 14px; margin: 0 0 6px; }
+  .flow .card img, .flow .card canvas { width: 100%; aspect-ratio: 1; object-fit: contain; background: #fff; border: 1px solid var(--line); cursor: zoom-in; display: block; }
+  .flow .cap { font-size: 12px; color: var(--mut); margin-top: 4px; }
+  .flow .req { font-size: 15px; font-weight: 600; margin: 6px 0 2px; color: #8a2b00; }
+  .step { display: inline-block; min-width: 1.4em; text-align: center; }
+  @media (max-width: 900px) { .flow { grid-template-columns: 1fr; } .flow .arrow { transform: rotate(90deg); } }
 </style>
 <script type="importmap">
 { "imports": {
@@ -56,12 +65,10 @@
 <body>
 <header class="top"><a href="/">← 목록</a><a href="/?tab=scenarios">시나리오 목록</a><h1 id="title">시나리오</h1><span id="tags"></span></header>
 
-<section id="sec-head"><h2>머리말</h2><div class="kv" id="head"></div></section>
-
-<section id="sec-cond"><h2>조건 이미지 (동결, 1024²) — 누르면 원래 크기</h2><div class="conds" id="conds"></div></section>
+<section id="sec-flow"><h2>편집 흐름 — 이미지를 누르면 원래 크기(1024²)</h2><div class="flow" id="flow"></div></section>
 
 <section id="sec-3d">
-  <h2>3D 비교 — 카메라 연동(한 칸을 돌리면 모두 같이 돈다)</h2>
+  <h2><span class="step">④</span> 수정된 오브젝트 (3D) — 카메라 연동(한 칸을 돌리면 모두 같이 돈다)</h2>
   <div class="bar" id="camBar"></div>
   <div class="bar" id="ovBar"></div>
   <div class="panels" id="panels"></div>
@@ -79,6 +86,8 @@
 </section>
 
 <section id="sec-metrics"><h2>수치</h2><div id="metrics"></div></section>
+
+<section id="sec-head"><h2>상세 정보</h2><div class="kv" id="head"></div></section>
 
 <div id="capture"></div>
 <script type="module" src="/scenario.js"></script>

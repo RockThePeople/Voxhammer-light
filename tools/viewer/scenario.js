@@ -12,8 +12,8 @@ const OV = [
   ['new_out', 'R_keep 신규(9a 남음)', 0xffd400], ['new_out_9a', 'R_keep 신규(9a 제거 대상)', 0xb8860b],
   ['lost', '소실', 0x2060ff], ['sel', '선택한 성분', 0xff00ff],
 ];
-// halo 고리는 큰 마스크에서 화면을 덮으므로 기본 꺼짐(체크박스로 켠다)
-const state = { meta: null, panels: [], ov: new Set((Q.get('ov') ?? 'mask,new_in,new_out,new_out_9a,lost').split(',').filter(Boolean)),
+// ④ 는 수정된 오브젝트를 보는 칸이라 겹치기는 기본 꺼짐(체크박스로 켠다). URL ?ov=mask,new_out,… 로 지정 가능
+const state = { meta: null, panels: [], ov: new Set((Q.get('ov') ?? '').split(',').filter(Boolean)),
   mode: Q.get('mode') || 'both', selComp: null, compPanel: null };
 
 // 공유 카메라: 모든 칸이 같은 카메라 객체를 쓰고, 각 칸의 OrbitControls 가 같은 target 으로 그것을 움직인다.
@@ -60,6 +60,23 @@ function instanced(flat, xf, color, kind) {
   return mesh;
 }
 
+// R4 정점색(.cbin → glbbuild)은 sRGB 값인데 three.js 는 COLOR_0 을 선형으로 읽는다(glTF 규격) → 화면 표시용으로만 선형으로 바꾼다.
+// (editcore/render.py 의 렌더 입력 보정과 같은 방향. 파일은 그대로)
+function linearizeVertexColors(obj) {
+  obj.traverse((o) => {
+    const c = o.isMesh && o.geometry.attributes.color;
+    if (!c || o.geometry.userData.vhlLinear) return;
+    const n = c.count, w = c.itemSize, out = new Float32Array(n * w);
+    const f = (x) => (x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
+    for (let i = 0; i < n; i++) {
+      out[i * w] = f(c.getX(i)); out[i * w + 1] = f(c.getY(i)); out[i * w + 2] = f(c.getZ(i));
+      if (w === 4) out[i * w + 3] = c.getW(i);
+    }
+    o.geometry.setAttribute('color', new THREE.BufferAttribute(out, w));
+    o.geometry.userData.vhlLinear = true;
+  });
+}
+
 function applyVisibility(p) {
   if (p.mesh) p.mesh.visible = state.mode !== 'voxel';
   p.ovGroup.children.forEach((o) => {
@@ -102,6 +119,7 @@ async function buildPanel(p) {
     prepare(obj);
     // TRELLIS to_glb 재질은 금속성이라 환경맵 없이 검게 보인다 → 이 페이지에서만 비금속으로(형태 비교용)
     obj.traverse((o) => o.isMesh && [o.material].flat().forEach((mt) => { if (mt && 'metalness' in mt) { mt.metalness = 0; mt.roughness = Math.max(mt.roughness ?? 1, 0.7); } }));
+    linearizeVertexColors(obj);
     if (p.cfg !== 'src' && m.runs[p.cfg][p.run].normalize) placeNormalized(obj, m.xf);
     p.mesh = obj;
     p.scene.add(obj);
@@ -190,7 +208,7 @@ async function toggleChunks(p) {
   p.chunkBtn.classList.add('on'); p.legend.textContent = '청크 불러오는 중…';
   const info = await (await fetch(`/api/scenario_chunks?id=${encodeURIComponent(sid)}&cfg=${p.cfg}&run=${p.run}`)).json();
   const [par, chg] = await Promise.all([loadGLB(sfile(`chunks_parent:${p.cfg}:${p.run}`)), loadGLB(sfile(`chunks_changed:${p.cfg}:${p.run}`))]);
-  [par, chg].forEach((o) => { prepare(o); o.traverse((x) => x.isMesh && [x.material].flat().forEach((mt) => { if (mt && 'metalness' in mt) { mt.metalness = 0; mt.roughness = 0.8; } }));
+  [par, chg].forEach((o) => { prepare(o); linearizeVertexColors(o); o.traverse((x) => x.isMesh && [x.material].flat().forEach((mt) => { if (mt && 'metalness' in mt) { mt.metalness = 0; mt.roughness = 0.8; } }));
     if (m.runs[p.cfg][p.run].normalize) placeNormalized(o, m.xf); });
   const boxes = new THREE.Group();
   const state_ = Object.fromEntries(info.rows.map((r) => [r.key, r.state]));
@@ -277,15 +295,17 @@ function header(m) {
   document.getElementById('head').replaceChildren(...kv.flatMap(([k, v]) => [el('b', {}, k), el('span', {}, v)]));
 }
 
+// 편집 흐름: ① 원본(수정 전) → ② 마스킹 범위 + 수정 요청 → ③ 수정된 2D 이미지 (④ 수정된 오브젝트는 아래 3D 비교)
 async function conds(m) {
-  const box = document.getElementById('conds');
-  const figs = [];
-  for (const n of ['2d_render', '2d_mask', '2d_edit']) {
-    if (!m.cond[n]) continue;
-    const img = el('img', { src: sfile(`cond:${n}`), alt: n, loading: 'lazy' });
-    img.onclick = () => window.open(img.src, '_blank');
-    figs.push(el('figure', {}, img, el('figcaption', {}, n)));
-  }
+  const box = document.getElementById('flow');
+  const open = (e, src) => { e.onclick = () => window.open(src || e.src, '_blank'); return e; };
+  const img = (n) => open(el('img', { src: sfile(`cond:${n}`), alt: n, loading: 'lazy' }));
+  const card = (step, title, body, ...cap) => el('div', { class: 'card' }, el('h3', {}, el('span', { class: 'step' }, step), ' ', title), body, ...cap);
+  const view = m.edit_view != null ? `편집 시점 v${m.edit_view}` : '편집 시점';
+  const c1 = card('①', '원본 (수정 전)', m.cond['2d_render'] ? img('2d_render') : el('div', { class: 'note' }, '원본 렌더 없음'),
+    el('div', { class: 'cap' }, `${m.dataset} / ${m.object} · ${view} 원본 렌더(포크 Cycles)`),
+    ...(m.source_prompt ? [el('div', { class: 'cap' }, `원본 설명: ${m.source_prompt}`)] : []));
+  let overlay = el('div', { class: 'note' }, '마스크 이미지 없음');
   if (m.cond['2d_render'] && m.cond['2d_mask']) {
     const cv = el('canvas', { width: 1024, height: 1024 });
     const [a, b] = await Promise.all(['2d_render', '2d_mask'].map((n) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.src = sfile(`cond:${n}`); })));
@@ -300,9 +320,16 @@ async function conds(m) {
     }
     tg.putImageData(d, 0, 0); g.drawImage(t, 0, 0);
     cv.onclick = () => window.open(cv.toDataURL('image/png'), '_blank');
-    figs.push(el('figure', {}, cv, el('figcaption', {}, '2d_render + 2d_mask(반투명 빨강)')));
+    overlay = cv;
   }
-  box.replaceChildren(...figs);
+  const maskLink = m.cond['2d_mask'] ? el('a', { href: sfile('cond:2d_mask'), target: '_blank' }, '마스크만 보기') : '';
+  const c2 = card('②', '마스킹 범위 + 수정 요청', overlay,
+    el('div', { class: 'req' }, `“${m.prompt}”`),
+    el('div', { class: 'cap' }, `${m.prompt_kind} · 빨강 = 마스크(3D ${m.mask.n_cells} 셀을 ${view}로 투영) · `, maskLink),
+    ...(m.e12 ? [el('div', { class: 'cap' }, el('span', { class: 'tag' }, m.e12))] : []));
+  const c3 = card('③', '수정된 2D 이미지', m.cond['2d_edit'] ? img('2d_edit') : el('div', { class: 'note' }, '수정 이미지 없음'),
+    el('div', { class: 'cap' }, '인페인팅 결과(FLUX, seed 0, 동결 조건 이미지) — 3D 편집의 조건'));
+  box.replaceChildren(c1, el('div', { class: 'arrow' }, '→'), c2, el('div', { class: 'arrow' }, '→'), c3);
 }
 
 function metrics(m) {
@@ -359,7 +386,8 @@ async function main() {
   }
   if (Q.get('only3d') === '1') document.body.classList.add('only3d');
   header(m); conds(m); bars(m); metrics(m);
-  const want = (Q.get('panels') || `src,base:r1,c15:r1`).split(',').filter(Boolean);
+  // ④ 기본 칸: 원본 | c15(채택 기준) | R4(있으면) — 없으면 base
+  const want = (Q.get('panels') || (m.runs.r4 ? 'src,c15:r1,r4:r1' : m.runs.c15 ? 'src,c15:r1' : 'src,base:r1')).split(',').filter(Boolean);
   const ps = want.map((w) => { const [c, r] = w.split(':'); return (c === 'src' || m.runs[c]) ? addPanel(c, r || 'r1') : null; }).filter(Boolean);
   layout();
   await Promise.all(ps.map(waitBuilt));
