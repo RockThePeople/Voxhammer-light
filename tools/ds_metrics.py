@@ -37,7 +37,17 @@ def scenarios():
     for bid, s in tb.items():
         out.append({"id": bid, "name": f"track_b-{bid}", "fp": s["mask"]["fingerprint"][:12],
                     "slat": ASSETS / "track_b" / bid / "slat.safetensors", "mask": ASSETS / "track_b" / bid / "mask.json"})
+    for f in sorted(RUNS.glob("2026-10-23/01ref-moto-b-*/w34-*")):   # moto-b: 끔 = 0-1 포크 기준 3회
+        m = f.parent.name.replace("01ref-", "")
+        out.append({"id": m, "name": m, "off_dir": f, "slat": Path.home() / "ai-ar-data/assets/v3-moto-b/v1/slat.safetensors",
+                    "mask": ROOT / "third_party" / "ai-ar-v3" / "handoff" / "lasso" / f"moto-b.{m.replace('moto-b-', '')}.mask.json"})
     return out
+
+
+def on_slats(s):
+    """켬(이식) slat_tgt: A단계 저장본(on/<이름>/a) + B단계 CLI(on/<이름>/r1..r3) 중 있는 것. 켬은 결정적이라 서로 비트 동일이어야 한다."""
+    d = D / "on" / s["name"]
+    return {k: d / k / "slat_tgt.safetensors" for k in ("a", "r1", "r2", "r3") if (d / k / "slat_tgt.safetensors").is_file()}
 
 
 def bits():
@@ -63,14 +73,16 @@ def dist():
     pick = lambda v: {"coords_equal": v["coords_equal"], "preserved_bit_equal": v["preserved"].get("bit_equal"),
                       "max": v["edited"].get("max_abs_diff"), "mean": v["edited"].get("mean_abs_diff")}
     for s in scenarios():
-        on = {r: D / "on" / s["name"] / r / "slat_tgt.safetensors" for r in RUN_IDS}
-        f5 = {r: RUNS / "2026-10-22" / s["name"] / f"w34-{s['fp']}" / f"{r}.work" / "slat_tgt.safetensors" for r in RUN_IDS}
-        if not all(p.is_file() for p in on.values()):
+        on = on_slats(s)
+        offd = s.get("off_dir") or RUNS / "2026-10-22" / s["name"] / f"w34-{s['fp']}"
+        f5 = {r: offd / f"{r}.work" / "slat_tgt.safetensors" for r in RUN_IDS}
+        if not on:
             continue
-        c = {r: pick(compare(on[r], f5[r], s["slat"], s["mask"])) for r in RUN_IDS}
+        first = next(iter(on.values()))
+        c = {r: pick(compare(first, f5[r], s["slat"], s["mask"])) for r in RUN_IDS}   # 켬 1개 × 끔 3회 = 켬–끔 3쌍
         b = {f"{x}-{y}": pick(compare(f5[x], f5[y], s["slat"], s["mask"])) for x, y in itertools.combinations(RUN_IDS, 2)}
-        oo = {f"{x}-{y}": pick(compare(on[x], on[y], s["slat"], s["mask"])) for x, y in itertools.combinations(RUN_IDS, 2)}
-        rows[s["id"]] = {"on_off": c, "off_off": b, "on_on": oo,
+        oo = {f"{x}-{y}": pick(compare(on[x], on[y], s["slat"], s["mask"])) for x, y in itertools.combinations(on, 2)}
+        rows[s["id"]] = {"on_off": c, "off_off": b, "on_on": oo, "on_sources": list(on), "off_dir": str(offd),
                          "required_ok": all(v["coords_equal"] and v["preserved_bit_equal"] for v in c.values())}
         ch += list(c.values()); bs += list(b.values())
         print(s["id"], rows[s["id"]]["required_ok"], "on-on max", [v["max"] for v in oo.values()], flush=True)
@@ -86,6 +98,8 @@ def time():
     seg = lambda j, n: j["segments"].get(n, {}).get("seconds")
     for s in scenarios():
         on = [json.loads((D / "on" / s["name"] / f"{r}.json").read_text()) for r in RUN_IDS if (D / "on" / s["name"] / f"{r}.json").is_file()]
+        if len(on) < 3:   # 시간은 장비가 빈 상태에서 3회 잰 건만(DS_TIME)
+            continue
         off = [json.loads((RUNS / "01-port" / s["name"] / f"port-{r}.json").read_text()) for r in RUN_IDS]
         if not on:
             continue
