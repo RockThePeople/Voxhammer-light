@@ -20,7 +20,7 @@ if [ -z "$REF_DIR" ]; then
   REF_DIR=$(ls -d "$RUNS_DIR"/*/01ref-$name/w34-$fp | tail -1)
 fi
 for r in r1 r2 r3; do
-  "$PY" -u -m editcore.cli --slat "$slat" --mask_json "$mask" --image_dir "$img" --seed 0 \
+  VHL_E2A_STEPS_S1=25 VHL_E2A_STEPS_S2=25 "$PY" -u -m editcore.cli --slat "$slat" --mask_json "$mask" --image_dir "$img" --seed 0 \
       --out "$OUT/port-$r/output.glb" --slat_out "$OUT/port-$r/slat_tgt.safetensors" \
       --timing "$OUT/port-$r.json" > "$OUT/port-$r.log" 2>&1
   echo "port $r rc=$?"

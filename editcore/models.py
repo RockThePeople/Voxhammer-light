@@ -98,9 +98,13 @@ def apply_ds(pipe):
     return [d[0] for d in done], restore
 
 
+E2A_DEFAULT_STEPS = 15  # 정오표 E20 (포크 25 는 sampler.STEPS)
+
+
 def e2a_steps(cli_s1=None, cli_s2=None):
-    """1번 E2a 스텝 수. CLI 인자 > 환경변수 `VHL_E2A_STEPS_S1/S2` > 기본 25(꺼짐 = 0-1 과 같음)."""
+    """1번 E2a 스텝 수. CLI 인자 > 환경변수 `VHL_E2A_STEPS_S1/S2` > 기본 15(고객사 채택 15/15, 정오표 E20).
+    포크와 같은 25 스텝은 환경변수·CLI 로 줄 때만(포크 대조)."""
     def one(cli, env):
         v = cli if cli is not None else os.environ.get(env)
-        return 25 if v in (None, "") else int(v)
+        return E2A_DEFAULT_STEPS if v in (None, "") else int(v)
     return one(cli_s1, "VHL_E2A_STEPS_S1"), one(cli_s2, "VHL_E2A_STEPS_S2")

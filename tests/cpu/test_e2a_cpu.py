@@ -28,7 +28,10 @@ def test_toggle_precedence(monkeypatch):
     from editcore.models import e2a_steps
     monkeypatch.delenv("VHL_E2A_STEPS_S1", raising=False)
     monkeypatch.delenv("VHL_E2A_STEPS_S2", raising=False)
-    assert e2a_steps() == (25, 25)                      # 꺼짐 = 0-1
+    assert e2a_steps() == (15, 15)                      # 기본 = 고객사 채택 15/15 (E20)
+    monkeypatch.setenv("VHL_E2A_STEPS_S1", "25")
+    monkeypatch.setenv("VHL_E2A_STEPS_S2", "25")
+    assert e2a_steps() == (25, 25)                      # 포크 대조(0-1 과 같음)는 명시할 때만
     monkeypatch.setenv("VHL_E2A_STEPS_S1", "12")
     monkeypatch.setenv("VHL_E2A_STEPS_S2", "15")
     assert e2a_steps() == (12, 15)

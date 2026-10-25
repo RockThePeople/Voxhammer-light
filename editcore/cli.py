@@ -22,8 +22,8 @@ def main(argv=None):
     ap.add_argument("--timing")
     ap.add_argument("--parent_cbin", help="2번 R4: 부모 .cbin 디렉터리(chunks/ 또는 *.cbin). 있으면 마스크∪halo 부기 밖 청크를 승계")
     ap.add_argument("--cbin_out", help="2번 R4: .cbin 출력 디렉터리(기본 <--out 폴더>/cbin)")
-    ap.add_argument("--steps_s1", type=int, help="1번 E2a: Stage 1 스텝(기본 VHL_E2A_STEPS_S1 또는 25)")
-    ap.add_argument("--steps_s2", type=int, help="1번 E2a: Stage 2 스텝(기본 VHL_E2A_STEPS_S2 또는 25)")
+    ap.add_argument("--steps_s1", type=int, help="1번 E2a: Stage 1 스텝(기본 VHL_E2A_STEPS_S1 또는 15, E20)")
+    ap.add_argument("--steps_s2", type=int, help="1번 E2a: Stage 2 스텝(기본 VHL_E2A_STEPS_S2 또는 15, E20)")
     a = ap.parse_args(argv)
     t_proc = time.perf_counter()
 
