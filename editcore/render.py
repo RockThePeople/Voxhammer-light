@@ -32,8 +32,11 @@ def _srgb_to_linear(x):
     return np.where(x <= 0.04045, x / 12.92, ((x + 0.055) / 1.055) ** 2.4)
 
 
-def vertex_color_render_glb(data: bytes) -> bytes:
-    """정점색 GLB(바이트) → 렌더 입력용 GLB(바이트). 기하·면은 그대로다(2D 마스크가 바뀌지 않는다)."""
+def vertex_color_render_glb(data: bytes, *, metallic: float | None = 0.0, linearize: bool = True) -> bytes:
+    """정점색 GLB(바이트) → 렌더 입력용 GLB(바이트). 기하·면은 그대로다(2D 마스크가 바뀌지 않는다).
+
+    metallic: 기본 재질의 metallicFactor. None 이면 생략 → glTF 기본 1.0(to_glb 의 PBRMaterial 과 같은 재질).
+    linearize: COLOR_0 RGB sRGB → 선형 변환 여부."""
     import json
     import struct
 
@@ -46,8 +49,10 @@ def vertex_color_render_glb(data: bytes) -> bytes:
     bin_ = bytearray(data[boff + 8:boff + 8 + blen])
     j.setdefault("materials", [])
     mat_idx = len(j["materials"])
-    j["materials"].append({"name": "vhl_vertex_color", "pbrMetallicRoughness": {
-        "baseColorFactor": [1.0, 1.0, 1.0, 1.0], "metallicFactor": 0.0, "roughnessFactor": 1.0}})
+    pbr = {"baseColorFactor": [1.0, 1.0, 1.0, 1.0], "roughnessFactor": 1.0}
+    if metallic is not None:
+        pbr["metallicFactor"] = float(metallic)
+    j["materials"].append({"name": "vhl_vertex_color", "pbrMetallicRoughness": pbr})
     width = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}
     for mesh in j["meshes"]:
         for pr in mesh["primitives"]:
@@ -68,7 +73,8 @@ def vertex_color_render_glb(data: bytes) -> bytes:
                 raise ValueError(f"COLOR_0 componentType {acc['componentType']} 미지원")
             if w == 3:
                 c = np.concatenate([c, np.ones((n, 1))], 1)
-            c[:, :3] = _srgb_to_linear(np.clip(c[:, :3], 0.0, 1.0))
+            if linearize:
+                c[:, :3] = _srgb_to_linear(np.clip(c[:, :3], 0.0, 1.0))
             while len(bin_) % 4:
                 bin_.append(0)
             start = len(bin_)
