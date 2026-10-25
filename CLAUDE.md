@@ -73,6 +73,7 @@ VoxHammer(f33cd96 + 기준 패치) 기반 3D 편집 1회의 벽시계 시간을 
 | 테스트 | conformance 53/53, ai-ar-v3 서버 360 passed |
 
 - **비교 기준(E20 이후):** editcore 15 스텝. 기준–기준 바닥값은 E2a c15 r1–r3(14건 × 3쌍). 0-1·F-5 의 25 스텝 값은 포크 대조에만 쓴다.
+- **비트 비교(E22):** 판정에는 한 프로세스 안의 끔/켬 비교만 쓴다. 프로세스 사이(spconv Native 커널 선택)는 알려진 한계로 두고 고치지 않는다 — 같은 seed 비트 재현은 한 프로세스 안에서만 보장, R8a 워커는 재기동 전까지만 같은 입력 = 같은 결과. 프로세스가 다른 비교는 E14·E15(E21) 분포 판정.
 - Stage 2 실행 간 차이의 원인은 TRELLIS `SparseDownsample` 의 `scatter_reduce(mean)`(`trellis/modules/sparse/spatial.py:36`)이다. 검증 전용 결정화 토글은 E16(기본 꺼짐).
 
 ## 결과 변경 항목 판정 (요구사항서 6장 + 정오표 E18·E19)
