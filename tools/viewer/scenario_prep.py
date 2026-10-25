@@ -59,6 +59,7 @@ CONFIGS = {
     "c12": "12/12",
     "s1-12": "12/25 (원인 분리)",
     "s2-12": "25/12 (원인 분리)",
+    "r4": "15/15 + R4 (.cbin → glbbuild 정점색 GLB)",
 }
 E19_TOL = {"psnr": -0.5, "ssim": -0.003, "lpips": 0.005, "dino_i": -0.015, "clip_t": -0.015, "chamfer": 0.002}
 E19_AVG = {"psnr": -0.2, "dino_i": -0.005, "clip_t": -0.005}
@@ -139,13 +140,32 @@ def _moto_view(cond: Path):
 
 
 def run_dirs(s: dict, cfg: str) -> dict:
-    """회차 → 결과 폴더(output.glb·slat_tgt.safetensors). 없는 회차는 빠진다."""
+    """회차 → 결과 폴더(output.glb 또는 cbin/chunks, slat_tgt.safetensors). 없는 회차는 빠진다."""
     out = {}
     for r in ("r1", "r2", "r3"):
-        d = RUNS / "01-port" / s["name"] / f"port-{r}" if cfg == "base" else RUNS / E2A_DAY / s["name"] / f"e2a-{cfg}" / r
-        if (d / "output.glb").is_file() and (d / "slat_tgt.safetensors").is_file():
+        if cfg == "base":
+            d = RUNS / "01-port" / s["name"] / f"port-{r}"
+        elif cfg == "r4":
+            d = RUNS / "02-r4" / s["name"] / "r4-on" / r
+        else:
+            d = RUNS / E2A_DAY / s["name"] / f"e2a-{cfg}" / r
+        if ((d / "output.glb").is_file() or (d / "cbin" / "chunks").is_dir()) and (d / "slat_tgt.safetensors").is_file():
             out[r] = d
     return out
+
+
+def result_glb(s: dict, cfg: str, r: str, rdir: Path) -> Path:
+    """결과 GLB. R4 처럼 `.cbin` 만 있으면 ai-ar-v3 `glbbuild.build_glb`(CPU)로 캐시에 조립한다(입력은 읽기만)."""
+    if (rdir / "output.glb").is_file():
+        return rdir / "output.glb"
+    dst = CACHE / s["id"] / cfg / f"{r}.glb"
+    chunks = rdir / "cbin" / "chunks"
+    if not dst.is_file() or dst.stat().st_mtime < max(p.stat().st_mtime for p in chunks.glob("*.cbin")):
+        if str(REPO / "third_party" / "ai-ar-v3") not in sys.path:
+            sys.path.insert(0, str(REPO / "third_party" / "ai-ar-v3"))
+        from server.glbbuild import build_glb
+        build_glb(chunks, dst)
+    return dst
 
 
 def coords(p: Path) -> np.ndarray:
@@ -298,7 +318,7 @@ def build(s: dict, do_align: bool) -> dict:
             stale = not out.is_file() or out.stat().st_mtime < st.stat().st_mtime
             if stale:
                 out.write_text(json.dumps(diff(s, src, mask, excl, st)))
-            runs[cfg][r] = {"glb": str(rdir / "output.glb"), "vox": f"{cfg}/{r}.json", "normalize": s["track"] != "B"}
+            runs[cfg][r] = {"glb": str(result_glb(s, cfg, r, rdir)), "vox": f"{cfg}/{r}.json", "normalize": s["track"] != "B"}
     cond = {n: str(s["cond"] / f"{n}.png") for n in ("2d_render", "2d_mask", "2d_edit") if (s["cond"] / f"{n}.png").is_file()}
     meta = {k: s[k] for k in ("id", "track", "dataset", "object", "prompt", "prompt_kind", "edit_view", "view_34")}
     meta.update({
