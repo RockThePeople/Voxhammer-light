@@ -30,6 +30,9 @@ EVAL_PY = os.environ.get("EVAL_PY", str(Path.home() / "vhl-venvs/edit3dbench/bin
 BENCH_SRC = ROOT / "third_party" / "VoxHammer" / "Edit3D-Bench"
 SCEN_DIR = ROOT / "scenarios" if (ROOT / "scenarios" / "track_b.json").exists() else ROOT.parent / "vhl-00s2" / "scenarios"
 CONFIGS = [c for c in os.environ.get("E2A_CONFIGS", "base,c15,c12").split(",") if c]
+# render·eval 만 좁힌다(예: s1-12·s2-12 는 트랙 B r1 만): E2A_RUNS=r1 E2A_TRACKS=B
+RUN_IDS = [r for r in os.environ.get("E2A_RUNS", "r1,r2,r3").split(",") if r]
+TRACKS = [t for t in os.environ.get("E2A_TRACKS", "A,B").split(",") if t]
 
 
 def scenarios():
@@ -154,6 +157,8 @@ def render():
     gtA = OUT / "trackA_gt" / "data"
     meta = []
     for s in scenarios():
+        if s["track"] not in TRACKS:
+            continue
         if s["track"] == "A":
             # 트랙 A 정답(원본 16시점)과 metadata
             g = gtA / "TrackA" / s["id"]
@@ -166,7 +171,7 @@ def render():
                     Image.new("L", (512, 512), 0).save(mp)  # 마스크 밖 지표는 트랙 A 에서 쓰지 않는다
             meta.append({"dataset": "TrackA", "source_model": s["id"], "source_prompt": s["asset"], "prompt_1": s["prompt"]})
         for cfg in CONFIGS:
-            for r in ("r1", "r2", "r3"):
+            for r in RUN_IDS:
                 glb = run_dir(s, cfg, r)[0] / "output.glb"
                 if not glb.exists():
                     continue
@@ -181,17 +186,21 @@ def render():
                     _norm_glb(glb, d / "edit.glb", s["norm"])
                 _render(d / "edit.glb", d / "images")
                 print("rendered", cfg, r, s["id"], flush=True)
-    (gtA / "metadata.json").write_text(json.dumps(meta, indent=1))
+    if meta:
+        (gtA / "metadata.json").write_text(json.dumps(meta, indent=1))
 
 
 def evaluate():
-    res = {}
+    # 이미 있는 설정의 결과는 두고, 이번 CONFIGS 의 시나리오만 덮어쓴다
+    res = json.loads((OUT / "eval.json").read_text()) if (OUT / "eval.json").exists() else {}
     for s in scenarios():
+        if s["track"] not in TRACKS:
+            continue
         gt = ASSETS / "Edit3D-Bench" / "data" if s["track"] == "B" else OUT / "trackA_gt" / "data"
         metrics = ["psnr", "ssim", "lpips", "dino_i", "chamfer", "clip_t"] if s["track"] == "B" else ["dino_i", "clip_t"]
         for cfg in CONFIGS:
             vals = {}
-            for r in ("r1", "r2", "r3"):
+            for r in RUN_IDS:
                 pred = OUT / "pred" / cfg / r / s["id"]
                 if not pred.exists():
                     continue
