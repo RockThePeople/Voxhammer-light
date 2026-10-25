@@ -61,6 +61,7 @@ def main():
     ap.add_argument("--image_dir", required=True)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--slat_out", help="이식 1회차 slat_tgt 저장 경로(선택)")
     a = ap.parse_args()
     paths = {"slat": str(Path(a.slat).resolve()), "mask": str(Path(a.mask_json).resolve()),
              "images": str(Path(a.image_dir).resolve())}
@@ -79,6 +80,11 @@ def main():
     p1 = counted(run_port, pipe, paths, a.seed)
     p2 = counted(run_port, pipe, paths, a.seed)
     restore()
+    if a.slat_out:   # B단계 분포 비교에 재사용(켬 이식 1회차, R2 형식)
+        from safetensors.torch import save_file
+        c, f = p1["slat_tgt"]
+        save_file({"coords": c.to(torch.int32).contiguous(), "feats": f.float().contiguous()}, a.slat_out,
+                  metadata={"slat_space": "denormalized", "source": "run_ds port1 (VHL_DS 켬, 25 스텝)"})
 
     from safetensors import safe_open
     with safe_open(paths["slat"], "np") as sf:
