@@ -1,0 +1,479 @@
+{
+ "item": "00s2 F-3 (a5000)",
+ "note": "트랙 B 동결(정오표 E10): 판본 0 SLat(원저자 경로 1회), 마스크(3d_edit_region 64³), 조건 이미지(데이터셋, 시점 불일치 건만 FLUX seed 0). 파일은 ASSETS_DIR, 해시만.",
+ "iou_threshold": 0.9,
+ "scenarios": {
+  "B1": {
+   "dataset": "GSO",
+   "object": "RJ_Rabbit_Easter_Basket_Blue",
+   "prompt_id": 3,
+   "prompt": "A basket with a watermelon.",
+   "source_prompt": "A blue basket.",
+   "source_glb_sha256": "2216fce000dd0910adba832be8f32e99ebbb9bb7f94841eb0a0f7f8b939f6cad",
+   "slat_sha256": "b400a968d4f7c351c3c1c51d85a80c3a57e438e2dce5f6d24759087761d489a8",
+   "slat_cells": 13633,
+   "occupancy": {
+    "source_cells": 13633,
+    "recon_cells": 14168,
+    "intersection": 13609,
+    "iou": 0.9589205186020293,
+    "lost": 24,
+    "new": 559,
+    "loss_ratio": 0.0017604342404459767
+   },
+   "registration_seconds": {
+    "render_150views": 87.98898513242602,
+    "feature_extraction": 25.621647886931896,
+    "slat_encode": 0.4123108247295022
+   },
+   "mask": {
+    "n_cells": 21884,
+    "fingerprint": "71ad9622bee7826de23a917b38c09cff26c4b7912c754913542b110f6c6821c2",
+    "file_sha256": "e997c0df3baa2574eea0317bc89d5d189b4d7dbbcc749a1807131ef9c6e5d732"
+   },
+   "mask_iou_per_view": [
+    0.18683203588863967,
+    0.4971225484601966,
+    0.6290781604454526,
+    0.5827919473853064,
+    0.25051080660580727
+   ],
+   "best_view": 2,
+   "best_iou": 0.6290781604454526,
+   "condition_origin": "FLUX",
+   "condition_reason": "최고 IoU 0.629 < 0.9 → view 2 포크 렌더 + FLUX seed 0",
+   "edit_view": 2,
+   "condition_sha256": {
+    "2d_render.png": "d8aa520a92ceb12db228e0932745225fd313609ecb651b4c633c9a656c158687",
+    "2d_mask.png": "e3e2d3a9b9e49902dd9deda1fb4ed3a48f88f65e2fc614d7c15006995b12dc6c",
+    "2d_edit.png": "a2532431148087c30331ece8f0ffb0f902a015afc1a2b857297c79cd0b17e87a"
+   },
+   "dataset_2d_sha256": {
+    "2d_render.png": "2a22e24d533cd296e25dcadd439b9c56a99116f968b7681a7654d0755a5effa1",
+    "2d_mask.png": "db22034005e0b618ba219a66be8502fc355b86ffa88a8702b978a0a99de9102a",
+    "2d_edit.png": "ba4dbb922d317b24a018262e08a1ec57181b31b492f76bafcce490720d25b391"
+   },
+   "seed": 0,
+   "files": {
+    "slat": "track_b/B1/slat.safetensors",
+    "mask": "track_b/B1/mask.json",
+    "cond": "track_b/B1/cond"
+   },
+   "edit_seed": 0,
+   "status": "동결 (00s2 F-3)"
+  },
+  "B2": {
+   "dataset": "PartObjaverse-Tiny",
+   "object": "0c4e4a0b2a374553ae762bb33e8dd2d0",
+   "prompt_id": 1,
+   "prompt": "A blue ice cream with knife and fork on it.",
+   "source_prompt": "A blue ice cream.",
+   "source_glb_sha256": "d9f604582421933514f7ca14e7b8881c278ecba4c0b509f79d1ed6302da907ae",
+   "slat_sha256": "d1dd792c862a4deb7f5d6572a9934a51bcab055a446ba3481ffebb0416bd88c7",
+   "slat_cells": 23075,
+   "occupancy": {
+    "source_cells": 23075,
+    "recon_cells": 24184,
+    "intersection": 22497,
+    "iou": 0.9085291979646232,
+    "lost": 578,
+    "new": 1687,
+    "loss_ratio": 0.02504875406283857
+   },
+   "registration_seconds": {
+    "render_150views": 93.90985472593457,
+    "feature_extraction": 30.658202558755875,
+    "slat_encode": 0.607804904691875
+   },
+   "mask": {
+    "n_cells": 9964,
+    "fingerprint": "9f19ff2f8a20bf36f7391bdad61930b4d72cb866353e020fc3c7c187a0f2a211",
+    "file_sha256": "586459f8253d25795d9a2e930870f25471c72c9fc7db311453fb11b13482bcfb"
+   },
+   "mask_iou_per_view": [
+    0.4878991947444165,
+    1.0,
+    0.04786556517941626,
+    0.13115188551296242,
+    0.17212698566212917
+   ],
+   "best_view": 1,
+   "best_iou": 1.0,
+   "condition_origin": "dataset",
+   "condition_reason": "최고 IoU 1.000 ≥ 0.9",
+   "edit_view": 1,
+   "condition_sha256": {
+    "2d_render.png": "b9149114e241ec057d38f9df9bb67122985f317d7ddd2f6f61314673eef530f4",
+    "2d_mask.png": "2d4873cd5f306312ad14ad702caa0badb6a635d437747627b4ee9dc53d9d6a4d",
+    "2d_edit.png": "25fe241bc5f030f026e7bda8df62b1dd7ba81130848f3825353ab61141582cc6"
+   },
+   "dataset_2d_sha256": {
+    "2d_render.png": "b9149114e241ec057d38f9df9bb67122985f317d7ddd2f6f61314673eef530f4",
+    "2d_mask.png": "2d4873cd5f306312ad14ad702caa0badb6a635d437747627b4ee9dc53d9d6a4d",
+    "2d_edit.png": "25fe241bc5f030f026e7bda8df62b1dd7ba81130848f3825353ab61141582cc6"
+   },
+   "seed": 0,
+   "files": {
+    "slat": "track_b/B2/slat.safetensors",
+    "mask": "track_b/B2/mask.json",
+    "cond": "track_b/B2/cond"
+   },
+   "edit_seed": 0,
+   "status": "동결 (00s2 F-3)"
+  },
+  "B3": {
+   "dataset": "GSO",
+   "object": "SpiderMan_Titan_Hero_12Inch_Action_Figure_5Hnn4mtkFsP",
+   "prompt_id": 1,
+   "prompt": "Spider-Man with Iron Man's helmet.",
+   "source_prompt": "Spider-Man.",
+   "source_glb_sha256": "8b33108dcdf664412d2722c68139433a36f9ad4cceba06d1302b1e14acdc0a6f",
+   "slat_sha256": "41ea362a0f276b54b50b2d8e9f34e9fdd9f0a9b4ce9a5492927e016e437c0f63",
+   "slat_cells": 3809,
+   "occupancy": {
+    "source_cells": 3809,
+    "recon_cells": 4693,
+    "intersection": 3807,
+    "iou": 0.8108626198083068,
+    "lost": 2,
+    "new": 886,
+    "loss_ratio": 0.0005250721974271463
+   },
+   "registration_seconds": {
+    "render_150views": 75.02404293138534,
+    "feature_extraction": 20.151282345876098,
+    "slat_encode": 0.1510930024087429
+   },
+   "mask": {
+    "n_cells": 1518,
+    "fingerprint": "fefb288c51129d98de2f3dbdb7c9d5455d1dff12ea24ee8db59da9b876f5893f",
+    "file_sha256": "65be8ca538369059255a6203e124252e35950c645ea351188d1159edb7f94ce8"
+   },
+   "mask_iou_per_view": [
+    0.30448102610187494,
+    0.4492679047574496,
+    1.0,
+    0.4472429906542056,
+    0.2998655311519498
+   ],
+   "best_view": 2,
+   "best_iou": 1.0,
+   "condition_origin": "dataset",
+   "condition_reason": "최고 IoU 1.000 ≥ 0.9",
+   "edit_view": 2,
+   "condition_sha256": {
+    "2d_render.png": "3934633975588e8f7e87265641b7fc82a5f0ac72a423085741397a2ae420f75d",
+    "2d_mask.png": "a4586e6b3d9bd3f7d6fa9399cbf656d1a7cd5f124a3fa7cc70b6e66b2182a5e2",
+    "2d_edit.png": "7aa0d7feb2a5b31803acf8f73f7cf5d6746aa0cacd0c8780fa49ce9026295693"
+   },
+   "dataset_2d_sha256": {
+    "2d_render.png": "3934633975588e8f7e87265641b7fc82a5f0ac72a423085741397a2ae420f75d",
+    "2d_mask.png": "a4586e6b3d9bd3f7d6fa9399cbf656d1a7cd5f124a3fa7cc70b6e66b2182a5e2",
+    "2d_edit.png": "7aa0d7feb2a5b31803acf8f73f7cf5d6746aa0cacd0c8780fa49ce9026295693"
+   },
+   "seed": 0,
+   "files": {
+    "slat": "track_b/B3/slat.safetensors",
+    "mask": "track_b/B3/mask.json",
+    "cond": "track_b/B3/cond"
+   },
+   "edit_seed": 0,
+   "status": "동결 (00s2 F-3)"
+  },
+  "B4": {
+   "dataset": "PartObjaverse-Tiny",
+   "object": "dcf35ae14df947a9a700b8bcff8db57f",
+   "prompt_id": 1,
+   "prompt": "A fan with a black metal base.",
+   "source_prompt": "A fan.",
+   "source_glb_sha256": "0d431158b0695c2d3b2bc561c655e18e36b5f86bd2cc32cae86a2fdc1d76be52",
+   "slat_sha256": "e4221067123f070a0607d42a1363e8470c2d61afb599c8d5b1fe98ac712902a0",
+   "slat_cells": 10809,
+   "occupancy": {
+    "source_cells": 10809,
+    "recon_cells": 11426,
+    "intersection": 10788,
+    "iou": 0.9424303310911156,
+    "lost": 21,
+    "new": 638,
+    "loss_ratio": 0.0019428254232583958
+   },
+   "registration_seconds": {
+    "render_150views": 85.19569530617446,
+    "feature_extraction": 23.99418620299548,
+    "slat_encode": 0.28775828052312136
+   },
+   "mask": {
+    "n_cells": 16727,
+    "fingerprint": "c78e9e54248d65622dd61a1bf63f5ee0c713b268f9c9c432875444db1919cd62",
+    "file_sha256": "46a791820f91e08faebc56167e2e11ea386fffb1a8b9755c34ab975bd829b77f"
+   },
+   "mask_iou_per_view": [
+    0.5421637026193665,
+    1.0,
+    0.48457718090911117,
+    0.360026822181131,
+    0.308862045770062
+   ],
+   "best_view": 1,
+   "best_iou": 1.0,
+   "condition_origin": "dataset",
+   "condition_reason": "최고 IoU 1.000 ≥ 0.9",
+   "edit_view": 1,
+   "condition_sha256": {
+    "2d_render.png": "280c55ad194e52c4aae653f744db88b3f0ee89d00915a8041b78814358cd0faa",
+    "2d_mask.png": "7cac3fc40c5a1d041eb640e0448d7bf2a8d37950d18ff1bc267e639c11b65e35",
+    "2d_edit.png": "cc688720769082e7dc0c645899e6dec7e65e99701d095cc33101c96deb083341"
+   },
+   "dataset_2d_sha256": {
+    "2d_render.png": "280c55ad194e52c4aae653f744db88b3f0ee89d00915a8041b78814358cd0faa",
+    "2d_mask.png": "7cac3fc40c5a1d041eb640e0448d7bf2a8d37950d18ff1bc267e639c11b65e35",
+    "2d_edit.png": "cc688720769082e7dc0c645899e6dec7e65e99701d095cc33101c96deb083341"
+   },
+   "seed": 0,
+   "files": {
+    "slat": "track_b/B4/slat.safetensors",
+    "mask": "track_b/B4/mask.json",
+    "cond": "track_b/B4/cond"
+   },
+   "edit_seed": 0,
+   "status": "동결 (00s2 F-3)"
+  },
+  "B5": {
+   "dataset": "GSO",
+   "object": "Squirtin_Barnyard_Friends_4pk",
+   "prompt_id": 2,
+   "prompt": "A sheep, a cow, a red cow, and a chicken.",
+   "source_prompt": "A sheep, a cow, a pig, and a chicken.",
+   "source_glb_sha256": "9fa2730506afa3399aa0017eb1842679d9848f83e14111bbf8903a7bf919d7c5",
+   "slat_sha256": "e5185b766808c70c3a75051f1e8c6514908ccd0f807755bf2e7752954df80d88",
+   "slat_cells": 6857,
+   "occupancy": {
+    "source_cells": 6857,
+    "recon_cells": 8576,
+    "intersection": 6857,
+    "iou": 0.7995569029850746,
+    "lost": 0,
+    "new": 1719,
+    "loss_ratio": 0.0
+   },
+   "registration_seconds": {
+    "render_150views": 77.73117976821959,
+    "feature_extraction": 21.567157025448978,
+    "slat_encode": 0.18488664738833904
+   },
+   "mask": {
+    "n_cells": 17992,
+    "fingerprint": "4ecd33fa874df1c0c36a7816beb8de04a3baed6fc8b61a0c2548b8c1b69a3083",
+    "file_sha256": "38da5f81bbdf3bfb19ae60855e7f40acc7381e85acc6afe2e49d117bf7376b70"
+   },
+   "mask_iou_per_view": [
+    0.26227299237777285,
+    0.5922036133983531,
+    1.0,
+    0.5918448975056941,
+    0.27239025326630756
+   ],
+   "best_view": 2,
+   "best_iou": 1.0,
+   "condition_origin": "dataset",
+   "condition_reason": "최고 IoU 1.000 ≥ 0.9",
+   "edit_view": 2,
+   "condition_sha256": {
+    "2d_render.png": "23d07d63609547f3f6108cd4a78f8bbee320f977001380ad57a5d55009037a54",
+    "2d_mask.png": "7e4c22c2742dcd384e0f0073f168aa3348a96abedc4d09fd8b1a4f0c50efe56a",
+    "2d_edit.png": "f9289ee21a0e088a46cf66cad75fd7a9daa4119dcf25ff7a9d49c42c0586ae16"
+   },
+   "dataset_2d_sha256": {
+    "2d_render.png": "23d07d63609547f3f6108cd4a78f8bbee320f977001380ad57a5d55009037a54",
+    "2d_mask.png": "7e4c22c2742dcd384e0f0073f168aa3348a96abedc4d09fd8b1a4f0c50efe56a",
+    "2d_edit.png": "f9289ee21a0e088a46cf66cad75fd7a9daa4119dcf25ff7a9d49c42c0586ae16"
+   },
+   "seed": 0,
+   "files": {
+    "slat": "track_b/B5/slat.safetensors",
+    "mask": "track_b/B5/mask.json",
+    "cond": "track_b/B5/cond"
+   },
+   "edit_seed": 0,
+   "status": "동결 (00s2 F-3)"
+  },
+  "B6": {
+   "dataset": "PartObjaverse-Tiny",
+   "object": "97582e1d16f6471bac014081535c26ad",
+   "prompt_id": 1,
+   "prompt": "A queen with a cuirass.",
+   "source_prompt": "A queen.",
+   "source_glb_sha256": "a0b1d50d5c781ba7601c197b16efa58aa62f3875af962da490cc8d14e2c10a3a",
+   "slat_sha256": "136899ea14e7321e001f566ba0581fe976a683c171c5edbe8d2d40cfc4d1eb25",
+   "slat_cells": 8234,
+   "occupancy": {
+    "source_cells": 8234,
+    "recon_cells": 9699,
+    "intersection": 8194,
+    "iou": 0.8413594824930691,
+    "lost": 40,
+    "new": 1505,
+    "loss_ratio": 0.004857906242409522
+   },
+   "registration_seconds": {
+    "render_150views": 78.16836058162153,
+    "feature_extraction": 22.57448696345091,
+    "slat_encode": 0.22561536263674498
+   },
+   "mask": {
+    "n_cells": 7432,
+    "fingerprint": "3763a881c044e735d62cedccd144842fa88767e49164f8108ed5968335fc1fad",
+    "file_sha256": "10de3f68a5e6d435142a74e34ec915c95bf86b710f58747e8e787a6e0c626904"
+   },
+   "mask_iou_per_view": [
+    0.19409410623332524,
+    0.5050113771806263,
+    1.0,
+    0.4944313830859139,
+    0.17701152840503923
+   ],
+   "best_view": 2,
+   "best_iou": 1.0,
+   "condition_origin": "dataset",
+   "condition_reason": "최고 IoU 1.000 ≥ 0.9",
+   "edit_view": 2,
+   "condition_sha256": {
+    "2d_render.png": "9acf202ec5dd98d8b59c4407b4dfd76bac5e6646ac4f0923bc0ae663bdd810e7",
+    "2d_mask.png": "20d6a3e1f36cbf7478a38159892a72012efbbb046cdc47a681f2a887397c9a7f",
+    "2d_edit.png": "01bb455d19e853b1ad5d1d655aa990e484c1a7355a1ff2b73fda2ae3bc1de3bf"
+   },
+   "dataset_2d_sha256": {
+    "2d_render.png": "9acf202ec5dd98d8b59c4407b4dfd76bac5e6646ac4f0923bc0ae663bdd810e7",
+    "2d_mask.png": "20d6a3e1f36cbf7478a38159892a72012efbbb046cdc47a681f2a887397c9a7f",
+    "2d_edit.png": "01bb455d19e853b1ad5d1d655aa990e484c1a7355a1ff2b73fda2ae3bc1de3bf"
+   },
+   "seed": 0,
+   "files": {
+    "slat": "track_b/B6/slat.safetensors",
+    "mask": "track_b/B6/mask.json",
+    "cond": "track_b/B6/cond"
+   },
+   "edit_seed": 0,
+   "status": "동결 (00s2 F-3)"
+  },
+  "B7": {
+   "dataset": "GSO",
+   "object": "3D_Dollhouse_TablePurple",
+   "prompt_id": 1,
+   "prompt": "A porcelain dish on wooden supports.",
+   "source_prompt": "A purple table.",
+   "source_glb_sha256": "8afad6ac7d16aa6f0ef18ecba38ed370a3b4a4530679d37a0d623c838ad570fd",
+   "slat_sha256": "20c5ea0b6e7906b3daba20f039d182c3dc8440090888f5be627691a9e9a1ffbb",
+   "slat_cells": 11374,
+   "occupancy": {
+    "source_cells": 11374,
+    "recon_cells": 14107,
+    "intersection": 11373,
+    "iou": 0.8061383612134959,
+    "lost": 1,
+    "new": 2734,
+    "loss_ratio": 8.791981712678038e-05
+   },
+   "registration_seconds": {
+    "render_150views": 81.04034925904125,
+    "feature_extraction": 24.262817846611142,
+    "slat_encode": 0.30431595258414745
+   },
+   "mask": {
+    "n_cells": 64840,
+    "fingerprint": "a7f6407145b3560aded80eff889dce4d2d828838b5a0c061f1244d8a5b73ee50",
+    "file_sha256": "814a0c5a5ecc3fdb3e05fe3af741d4b60170e42b5d480787233a35a53f9d0b60"
+   },
+   "mask_iou_per_view": [
+    0.7665962597532865,
+    0.8732656722286388,
+    1.0,
+    0.8732656722286388,
+    0.7665962597532865
+   ],
+   "best_view": 2,
+   "best_iou": 1.0,
+   "condition_origin": "dataset",
+   "condition_reason": "최고 IoU 1.000 ≥ 0.9",
+   "edit_view": 2,
+   "condition_sha256": {
+    "2d_render.png": "22d7b0f593fbb972401d8a440fa1825135c579423b5b5dd74e86d98f0287b8f7",
+    "2d_mask.png": "c54f34c57d5dae169d168c0a45755adc38c52786c0a076b5d79030834831ba52",
+    "2d_edit.png": "3accc5a296ec3ffaec07f3c805add8d37e62b8b1bd2f69fa73d333e8ab561bbc"
+   },
+   "dataset_2d_sha256": {
+    "2d_render.png": "22d7b0f593fbb972401d8a440fa1825135c579423b5b5dd74e86d98f0287b8f7",
+    "2d_mask.png": "c54f34c57d5dae169d168c0a45755adc38c52786c0a076b5d79030834831ba52",
+    "2d_edit.png": "3accc5a296ec3ffaec07f3c805add8d37e62b8b1bd2f69fa73d333e8ab561bbc"
+   },
+   "seed": 0,
+   "files": {
+    "slat": "track_b/B7/slat.safetensors",
+    "mask": "track_b/B7/mask.json",
+    "cond": "track_b/B7/cond"
+   },
+   "edit_seed": 0,
+   "status": "동결 (00s2 F-3)"
+  },
+  "B8": {
+   "dataset": "PartObjaverse-Tiny",
+   "object": "5fb5b1704b464f5c94b667f1b630bb39",
+   "prompt_id": 1,
+   "prompt": "A merry-go-round.",
+   "source_prompt": "A building.",
+   "source_glb_sha256": "3190d9403dc02279e3623177350baf1d0fb8bfefc61de4b570e5595af6ad6133",
+   "slat_sha256": "1b22d23a74eb867b9c9789d0c30e0a4bcf460b0ac91caf50ebd4e9012ab3dcab",
+   "slat_cells": 8980,
+   "occupancy": {
+    "source_cells": 8980,
+    "recon_cells": 9237,
+    "intersection": 8910,
+    "iou": 0.9573439346728269,
+    "lost": 70,
+    "new": 327,
+    "loss_ratio": 0.0077951002227171495
+   },
+   "registration_seconds": {
+    "render_150views": 82.10853128414601,
+    "feature_extraction": 22.958035022951663,
+    "slat_encode": 0.2434771154075861
+   },
+   "mask": {
+    "n_cells": 20092,
+    "fingerprint": "733977432daf739401958b3da82e15a31fc917f8399a3b6e32fafec42e29cf84",
+    "file_sha256": "7bd4a2ad22e44f024f0189e3dd0e612175632cd1b6b51e7cc751c12fd83e73c3"
+   },
+   "mask_iou_per_view": [
+    0.794448540779678,
+    0.912079354542205,
+    1.0,
+    0.90239251945881,
+    0.7860589944354164
+   ],
+   "best_view": 2,
+   "best_iou": 1.0,
+   "condition_origin": "dataset",
+   "condition_reason": "최고 IoU 1.000 ≥ 0.9",
+   "edit_view": 2,
+   "condition_sha256": {
+    "2d_render.png": "b6eb6fa58b8fa1e7d9e54546f79662eb0b803fdca2003042ebc3551f82fa4afb",
+    "2d_mask.png": "7f99fdd55d4359245314d8124d7b49a1c8d7040bafd50aa9abf9de894fe1f40d",
+    "2d_edit.png": "a85b5f07e61219d8ff9061d1c59b895b4eadb154e5c60f7749f4775127c67e75"
+   },
+   "dataset_2d_sha256": {
+    "2d_render.png": "b6eb6fa58b8fa1e7d9e54546f79662eb0b803fdca2003042ebc3551f82fa4afb",
+    "2d_mask.png": "7f99fdd55d4359245314d8124d7b49a1c8d7040bafd50aa9abf9de894fe1f40d",
+    "2d_edit.png": "a85b5f07e61219d8ff9061d1c59b895b4eadb154e5c60f7749f4775127c67e75"
+   },
+   "seed": 0,
+   "files": {
+    "slat": "track_b/B8/slat.safetensors",
+    "mask": "track_b/B8/mask.json",
+    "cond": "track_b/B8/cond"
+   },
+   "edit_seed": 0,
+   "status": "동결 (00s2 F-3)"
+  }
+ }
+}

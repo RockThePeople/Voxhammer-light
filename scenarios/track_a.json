@@ -1,7 +1,7 @@
 {
- "item": "00s S-2/S-5 (a5000)",
+ "item": "00s S-2/S-5 + 00s2 F-1/F-2 (a5000)",
  "created": "2026-10-22",
- "note": "자산·마스크 초안. 조건 이미지(S-6)는 마스크 승인 후. 파일은 ASSETS_DIR(git 제외), 해시만.",
+ "note": "트랙 A 동결: 자산·마스크·조건 이미지(seed 0)·편집 시점·편집 seed 0. 파일은 ASSETS_DIR(git 제외), 해시만.",
  "assets": {
   "moto": {
    "subject": "a man riding a black motorcycle",
@@ -222,9 +222,26 @@
     35235,
     28231
    ],
-   "condition_images": null,
+   "condition_images": {
+    "dir": "track_a/moto/cond/A-M1",
+    "sha256": {
+     "2d_render.png": "6dc40f6f8e7c8978bfc0f5c9b59e5726017f69da8565900e7a9b33db531f9d69",
+     "2d_mask.png": "ce84b8da3951905304e29bf93c648b2261d639f7f114174c89771022682645c6",
+     "2d_edit.png": "e2fa4ee464aa95ef59af7cb416cf1020caa77f544b497b47964488e26598363c"
+    },
+    "seed": 0,
+    "flux": {
+     "model_id": "black-forest-labs/FLUX.1-Fill-dev",
+     "steps": 50,
+     "guidance": 30,
+     "resolution": 1024,
+     "dtype": "bfloat16",
+     "offload": "enable_model_cpu_offload"
+    }
+   },
    "condition_seed": 0,
-   "status": "draft (승인 전)"
+   "status": "동결 (00s2 F-2)",
+   "edit_seed": 0
   },
   "A-M2": {
    "asset": "moto",
@@ -263,50 +280,86 @@
     41461,
     67599
    ],
-   "condition_images": null,
+   "condition_images": {
+    "dir": "track_a/moto/cond/A-M2",
+    "sha256": {
+     "2d_render.png": "1d79daff8d9219fe27793eef8b28c07ba47c641786bf63c12181189c8c7058b5",
+     "2d_mask.png": "6b6c7edb19357e98b46158c41b064d445b3633ad4d5e17cd641541e467aa7a9e",
+     "2d_edit.png": "ec57ad5ed6e9847ac39d25bbfbc93f1c26563e171ba780c30a712c9779cdf118"
+    },
+    "seed": 0,
+    "flux": {
+     "model_id": "black-forest-labs/FLUX.1-Fill-dev",
+     "steps": 50,
+     "guidance": 30,
+     "resolution": 1024,
+     "dtype": "bfloat16",
+     "offload": "enable_model_cpu_offload"
+    }
+   },
    "condition_seed": 0,
-   "status": "draft (승인 전)"
+   "status": "동결 (00s2 F-2)",
+   "edit_seed": 0
   },
   "A-S1": {
    "asset": "snowman",
    "type": "추가",
-   "inpaint_prompt": "a tall black top hat on the snowman's head",
+   "inpaint_prompt": "a snowman holding a straw broom in its right hand",
    "scale_target": "중(빈 공간 위주)",
    "mask": {
     "file": "track_a/snowman/masks/A-S1.mask.json",
-    "n_cells": 10080,
-    "fingerprint": "fd61aa8cef411c1bdddd672123dff09f462e22d9e555e454fba42e4dc3190378",
+    "n_cells": 9360,
+    "fingerprint": "5bb923f6681316263da1f20eb4d6e38c4abcc361109105731c619913f61e9f71",
     "boxes": [
      [
       [
-       18,
-       18,
-       52
+       49,
+       25,
+       0
       ],
       [
-       45,
-       47,
-       63
+       63,
+       36,
+       51
       ]
      ]
     ],
-    "occupied_cells_in_mask": 1375,
-    "occupied_ratio": 0.1294,
+    "occupied_cells_in_mask": 234,
+    "occupied_ratio": 0.022,
     "halo_margin_voxels": 2,
-    "file_sha256": "3434e4a3af991a046014fac78db0672765a841b0a197fee384618076d02d0f23"
+    "file_sha256": "f68bb95847b4fd5e535eb1e04da5aa1a86a7140c209f2c58e2a36303969109a5"
    },
    "edit_view": 1,
    "view_34": 3,
    "mask_px_per_view": [
-    51384,
-    59162,
-    48012,
-    59153,
-    51377
+    102991,
+    130001,
+    85873,
+    40967,
+    0
    ],
-   "condition_images": null,
+   "condition_images": {
+    "dir": "track_a/snowman/cond/A-S1",
+    "sha256": {
+     "2d_render.png": "dabce6b042eee5c4f7f64f51b1ffcd0f1eaa514ce8ed3380d5090f2058cf29dd",
+     "2d_mask.png": "ec27952a93a4ef8c824b02e2b573e42050cf0c3108edf217ef26cfd8f9f67cf1",
+     "2d_edit.png": "d7db923f58df051bdc72da3d4be944d0f38ebd77d25dbc2b98a8f433c79ea191"
+    },
+    "seed": 0,
+    "flux": {
+     "model_id": "black-forest-labs/FLUX.1-Fill-dev",
+     "steps": 50,
+     "guidance": 30,
+     "resolution": 1024,
+     "dtype": "bfloat16",
+     "offload": "enable_model_cpu_offload"
+    }
+   },
    "condition_seed": 0,
-   "status": "draft (승인 전)"
+   "status": "동결 (00s2 F-2)",
+   "edit_seed": 0,
+   "part": "오른팔 옆 빈 공간(바닥~팔 높이, 손 끝 포함)",
+   "note": "정오표 E9 교체(top hat → straw broom)"
   },
   "A-S2": {
    "asset": "snowman",
@@ -345,9 +398,26 @@
     2702,
     7203
    ],
-   "condition_images": null,
+   "condition_images": {
+    "dir": "track_a/snowman/cond/A-S2",
+    "sha256": {
+     "2d_render.png": "af0dbe87a6bbf64f392124c66306bea52065232937caa838c8b884978fd5dffc",
+     "2d_mask.png": "60091a9487df836104df6422b310a317689d1542d271f52f0891fad1a70fa6da",
+     "2d_edit.png": "a0450575b5102f9d931563e9096f65ff192988eb82db98c66d9627a7e2081303"
+    },
+    "seed": 0,
+    "flux": {
+     "model_id": "black-forest-labs/FLUX.1-Fill-dev",
+     "steps": 50,
+     "guidance": 30,
+     "resolution": 1024,
+     "dtype": "bfloat16",
+     "offload": "enable_model_cpu_offload"
+    }
+   },
    "condition_seed": 0,
-   "status": "draft (승인 전)"
+   "status": "동결 (00s2 F-2)",
+   "edit_seed": 0
   },
   "A-C1": {
    "asset": "chair",
@@ -386,9 +456,26 @@
     83235,
     58399
    ],
-   "condition_images": null,
+   "condition_images": {
+    "dir": "track_a/chair/cond/A-C1",
+    "sha256": {
+     "2d_render.png": "656acca25f881036771f18b668c41b335657623da05d56bd4124501d45e2583f",
+     "2d_mask.png": "32b7e31144ba376aaccda59f385efd279097d66065d42a99b00133f7c53aab03",
+     "2d_edit.png": "99512eb4b1ae209de2e2f27f376b8a48a37c038c57974b4ea7a3251b8d2f12dc"
+    },
+    "seed": 0,
+    "flux": {
+     "model_id": "black-forest-labs/FLUX.1-Fill-dev",
+     "steps": 50,
+     "guidance": 30,
+     "resolution": 1024,
+     "dtype": "bfloat16",
+     "offload": "enable_model_cpu_offload"
+    }
+   },
    "condition_seed": 0,
-   "status": "draft (승인 전)"
+   "status": "동결 (00s2 F-2)",
+   "edit_seed": 0
   },
   "A-C2": {
    "asset": "chair",
@@ -439,9 +526,26 @@
     164443,
     140123
    ],
-   "condition_images": null,
+   "condition_images": {
+    "dir": "track_a/chair/cond/A-C2",
+    "sha256": {
+     "2d_render.png": "ea090c6d12a467be5c4d9da9f7113c05b899bbd8de20787f47743211e5782f69",
+     "2d_mask.png": "70090a827c8badac8897b8e0ef7570ec8a63979731f9863626c863329eeaf9f7",
+     "2d_edit.png": "b353816f5905be9f8b99baddeb9e4eb705ed03f6d95d34472aaf1f5890705531"
+    },
+    "seed": 0,
+    "flux": {
+     "model_id": "black-forest-labs/FLUX.1-Fill-dev",
+     "steps": 50,
+     "guidance": 30,
+     "resolution": 1024,
+     "dtype": "bfloat16",
+     "offload": "enable_model_cpu_offload"
+    }
+   },
    "condition_seed": 0,
-   "status": "draft (승인 전)"
+   "status": "동결 (00s2 F-2)",
+   "edit_seed": 0
   }
  }
 }

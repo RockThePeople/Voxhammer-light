@@ -2,7 +2,7 @@
 
 시나리오마다 "대상 부위 점유 셀" 을 선택 상자로 고르고(아래 SEL, 실측 투영으로 정함),
 그 점유 셀의 bbox + 여유 2셀을 64³ 안으로 자른 **상자 안 모든 셀(빈 칸 포함)** 을 마스크로 한다.
-A-S1 은 모자가 들어갈 빈 공간을 상자에 넣는다(위쪽 z 를 63 까지). 형식은 ai-ar-v3 `handoff/lasso/*.mask.json` 과 같다:
+A-S1(정오표 E9)은 오른팔 옆 빈 공간을 명시 상자로 잡는다. 형식은 ai-ar-v3 `handoff/lasso/*.mask.json` 과 같다:
   mode=voxels, grid_source=slat_coords, halo_margin_voxels=2, meta.mask_fingerprint=deltacontract.mask_fingerprint.
 조건 렌더용 mask.glb: 셀 합집합의 노출면(닫힌 표면)을 model.glb 와 같은 변환(VOXEL_TO_GLB → 정규화)으로 만든다.
 """
@@ -28,7 +28,10 @@ ASSETS = Path(os.environ["ASSETS_DIR"]) / "track_a"
 SEL = {
     "A-M1": ("moto", "라이더 머리", [(0, 29, 49), (63, 42, 63)], {}),
     "A-M2": ("moto", "뒷바퀴 전체", [(0, 42, 0), (63, 63, 27)], {}),
-    "A-S1": ("snowman", "머리 윗부분 + 위 빈 공간", [(0, 0, 54), (63, 63, 63)], {"extend_hi_z": 63}),
+    # 정오표 E9: "a snowman holding a straw broom in its right hand". 눈사람 정면 = 코 방향 +y, 위 +z →
+    # 오른쪽 = +x (오른손 좌표계). 오른팔 점유 x48–59·y30–31·z39–49, 손 끝 x59. 몸통 최대 x50.
+    # 빈 공간 상자: 몸통 바깥 x51 ~ 손 끝+2 x61, 팔 y±(3–4), 바닥 z0 ~ 팔 높이 z49. 여유 2셀은 box_mask 가 더한다.
+    "A-S1": ("snowman", "오른팔 옆 빈 공간(바닥~팔 높이, 손 끝 포함)", [(51, 27, 0), (61, 34, 49)], {"explicit_box": True}),
     "A-S2": ("snowman", "당근 코", [(28, 44, 50), (36, 63, 56)], {}),
     "A-C1": ("chair", "등받이", [(0, 44, 46), (63, 63, 63)], {}),
     "A-C2": ("chair", "양쪽 팔걸이", [[(0, 0, 36), (17, 43, 55)], [(46, 0, 36), (63, 43, 55)]], {}),
@@ -49,6 +52,10 @@ def dense(lo, hi):
 def box_mask(occ, sel, opt):
     lo, hi = np.array(sel[0]), np.array(sel[1])
     part = occ[np.all((occ >= lo) & (occ <= hi), axis=1)]
+    if opt.get("explicit_box"):  # 빈 공간 위주: 선택 상자 자체가 대상 영역
+        blo = np.clip(lo - MARGIN, 0, RES - 1)
+        bhi = np.clip(hi + MARGIN, 0, RES - 1)
+        return part, dense(blo, bhi), (blo.tolist(), bhi.tolist())
     if not len(part):
         raise SystemExit(f"선택 상자에 점유 셀이 없다: {sel}")
     blo = np.clip(part.min(0) - MARGIN, 0, RES - 1)
