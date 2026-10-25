@@ -173,6 +173,11 @@ class Scenarios:
             return None
         return self._json(self.root / sid / m["runs"][cfg][run]["vox"])
 
+    def chunks(self, sid: str, cfg: str, run: str):
+        m = self.meta(sid)
+        cv = (m or {}).get("runs", {}).get(cfg, {}).get(run, {}).get("chunk_view")
+        return self._json(self.root / sid / cv["chunks"]) if cv else None
+
     def file(self, sid: str, key: str) -> Path | None:
         """meta.json 에 오른 파일만: cond:<이름>, src_glb, glb:<설정>:<회차>."""
         m = self.meta(sid)
@@ -187,6 +192,10 @@ class Scenarios:
         elif kind == "glb":
             cfg, _, run = rest.partition(":")
             p = m["runs"].get(cfg, {}).get(run, {}).get("glb")
+        elif kind in ("chunks_parent", "chunks_changed"):   # V-5: chunks_parent:<설정>:<회차>
+            cfg, _, run = rest.partition(":")
+            cv = m["runs"].get(cfg, {}).get(run, {}).get("chunk_view") or {}
+            p = cv.get("parent_glb" if kind == "chunks_parent" else "changed_glb")
         p = Path(p) if p else None
         return p if p and p.is_file() else None
 
@@ -258,6 +267,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(m) if m else self._json({"error": "not found"}, 404)
         if path == "/api/scenario_vox":
             v = self.scen.vox(q.get("id", [""])[0], q.get("cfg", [""])[0], q.get("run", [""])[0])
+            return self._json(v) if v else self._json({"error": "not found"}, 404)
+        if path == "/api/scenario_chunks":
+            v = self.scen.chunks(q.get("id", [""])[0], q.get("cfg", [""])[0], q.get("run", [""])[0])
             return self._json(v) if v else self._json({"error": "not found"}, 404)
         if path == "/sfile":
             p = self.scen.file(q.get("id", [""])[0], q.get("key", [""])[0])

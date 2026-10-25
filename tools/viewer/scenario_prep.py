@@ -155,7 +155,10 @@ def run_dirs(s: dict, cfg: str) -> dict:
 
 
 def result_glb(s: dict, cfg: str, r: str, rdir: Path) -> Path:
-    """결과 GLB. R4 처럼 `.cbin` 만 있으면 ai-ar-v3 `glbbuild.build_glb`(CPU)로 캐시에 조립한다(입력은 읽기만)."""
+    """결과 GLB. R4 처럼 `.cbin` 만 있으면 ai-ar-v3 `glbbuild.build_glb`(CPU)로 캐시에 조립한다(입력은 읽기만).
+    R4 는 R11 정정 규칙(부기 ∪ 점유 변경)으로 다시 조립한 `output_r11.glb` 가 있으면 그것을 쓴다."""
+    if (rdir / "output_r11.glb").is_file():
+        return rdir / "output_r11.glb"
     if (rdir / "output.glb").is_file():
         return rdir / "output.glb"
     dst = CACHE / s["id"] / cfg / f"{r}.glb"
@@ -295,6 +298,77 @@ def alignment(s: dict, src_cells: np.ndarray) -> dict:
             "src_glb": str(s["src_glb"])}
 
 
+def parent_chunk_dir(s: dict) -> Path | None:
+    """R4 부모 `.cbin`: 트랙 A = 생성 때 gen/chunks, 트랙 B = 판본 0 mesh-only 디코딩(02-r4/parents)."""
+    p = Path(s["src_glb"]).parent / "chunks" if s["track"] == "A" else RUNS / "02-r4" / "parents" / s["id"] / "chunks"
+    return p if p.is_dir() else None
+
+
+def _chunk_scene(chunk_dir: Path, keys, dst: Path):
+    """청크마다 노드 하나(이름 = 청크 키)인 GLB. 좌표는 glbbuild 와 같게 복셀 프레임 → GLB(Y-up) (frames.VOXEL_TO_GLB)."""
+    import trimesh
+    if str(REPO / "third_party" / "ai-ar-v3") not in sys.path:
+        sys.path.insert(0, str(REPO / "third_party" / "ai-ar-v3"))
+    import deltacontract as dc
+    from server.pipeline.frames import VOXEL_TO_GLB
+    sc = trimesh.Scene()
+    for k in sorted(keys):
+        m = dc.decode((chunk_dir / f"{k}.cbin").read_bytes())
+        if m.index_count == 0:
+            continue
+        mesh = trimesh.Trimesh(VOXEL_TO_GLB.apply(np.asarray(m.positions, np.float64)), np.asarray(m.indices).reshape(-1, 3),
+                               vertex_colors=None if m.colors is None else np.asarray(m.colors), process=False)
+        sc.add_geometry(mesh, node_name=k, geom_name=k)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    sc.export(dst)
+
+
+def chunk_view(s: dict, r: str, rdir: Path, src_cells: np.ndarray, res_cells: np.ndarray, excl_cells: np.ndarray) -> dict | None:
+    """V-5: 부모 청크 위에 변경 청크만 교체. 상태 = 승계 / 변경(부기) / 변경(점유 변경으로만) / 제거.
+    규칙은 R11 정정(chief 2026-10-26): 변경 = 부기(마스크 ∪ halo) ∪ 점유 변경(청크 안 점유 셀 집합이 부모와 다름)."""
+    pdir = parent_chunk_dir(s)
+    cdir = rdir / "cbin_r11" if (rdir / "cbin_r11" / "chunks").is_dir() else rdir / "cbin"
+    if pdir is None or not (cdir / "chunks").is_dir():
+        return None
+    import hashlib as hl
+    from deltacontract.coords import chunk_keys_sorted, voxel_to_chunk
+    if str(REPO / "third_party" / "ai-ar-v3" / "contract" / "python") not in sys.path:
+        sys.path.insert(0, str(REPO / "third_party" / "ai-ar-v3" / "contract" / "python"))
+    import deltacontract as dc
+    keys = lambda cells: set(chunk_keys_sorted(voxel_to_chunk(cells))) if len(cells) else set()
+    book = keys(excl_cells)
+    code = lambda c: c[:, 0] * 4096 + c[:, 1] * 64 + c[:, 2]
+    d = np.setxor1d(code(src_cells), code(res_cells))
+    occ = keys(np.stack([d // 4096, (d // 64) % 64, d % 64], 1)) if d.size else set()
+    parent = {p.stem: p for p in (pdir).glob("*.cbin")}
+    child = {p.stem: p for p in (cdir / "chunks").glob("*.cbin")}
+    rows, changed = [], []
+    for k in sorted(set(parent) | set(child)):
+        st = ("removed" if k not in child else "inherited" if (k in parent and k not in book and k not in occ)
+              else "book" if k in book else "occupancy")
+        b = child.get(k, parent.get(k)).read_bytes()
+        m = dc.decode(b)
+        row = {"key": k, "state": st, "faces": int(m.index_count // 3), "bytes": len(b), "sha256": hl.sha256(b).hexdigest()[:16]}
+        if st == "inherited":
+            row["equal_parent"] = b == parent[k].read_bytes()
+        if st in ("book", "occupancy") and k in parent:
+            row["parent_faces"] = int(dc.decode(parent[k].read_bytes()).index_count // 3)
+        rows.append(row)
+        if st in ("book", "occupancy"):
+            changed.append(k)
+    d_out = CACHE / s["id"] / "r4"
+    if not (d_out / "parent_chunks.glb").is_file():
+        _chunk_scene(pdir, parent, d_out / "parent_chunks.glb")
+    _chunk_scene(cdir / "chunks", changed, d_out / f"{r}.changed.glb")
+    cnt = {st: sum(x["state"] == st for x in rows) for st in ("inherited", "book", "occupancy", "removed")}
+    out = {"rule": "변경 = 부기(마스크 ∪ halo 2) ∪ 점유 변경 (R11, chief 2026-10-26)",
+           "source": "cbin_r11" if cdir.name == "cbin_r11" else "cbin (부기만 쓴 원래 규칙 — R11 재조립 전)",
+           "counts": cnt, "rows": rows, "parent_dir": str(pdir), "child_dir": str(cdir),
+           "inherited_all_equal_parent": all(x.get("equal_parent", True) for x in rows)}
+    (d_out / f"{r}.chunks.json").write_text(json.dumps(out))
+    return {"chunks": f"r4/{r}.chunks.json", "parent_glb": str(d_out / "parent_chunks.glb"), "changed_glb": str(d_out / f"{r}.changed.glb")}
+
+
 def build(s: dict, do_align: bool) -> dict:
     from deltacontract.coords import dilate_cells
     t0 = time.time()
@@ -319,6 +393,10 @@ def build(s: dict, do_align: bool) -> dict:
             if stale:
                 out.write_text(json.dumps(diff(s, src, mask, excl, st)))
             runs[cfg][r] = {"glb": str(result_glb(s, cfg, r, rdir)), "vox": f"{cfg}/{r}.json", "normalize": s["track"] != "B"}
+            if cfg == "r4" and r == "r1":   # V-5 청크 보기(r1 만 — 청크 GLB 가 커서)
+                cv = chunk_view(s, r, rdir, src_c, coords(st), np.argwhere(excl))
+                if cv:
+                    runs[cfg][r]["chunk_view"] = cv
     cond = {n: str(s["cond"] / f"{n}.png") for n in ("2d_render", "2d_mask", "2d_edit") if (s["cond"] / f"{n}.png").is_file()}
     meta = {k: s[k] for k in ("id", "track", "dataset", "object", "prompt", "prompt_kind", "edit_view", "view_34")}
     meta.update({

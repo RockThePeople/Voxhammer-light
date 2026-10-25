@@ -144,7 +144,13 @@ function addPanel(cfg = 'src', run = 'r1', host = document.getElementById('panel
     cfgSel.onchange = runSel.onchange = () => { sync(); p.cfg = cfgSel.value; p.run = runSel.value; buildPanel(p); };
     const close = el('span', { class: 'x', title: '칸 닫기', onclick: () => removePanel(p) }, '✕');
     const compBtn = el('button', { title: '이 칸의 성분 표 보기', onclick: () => showComps(p) }, '성분');
-    p.root = el('div', { class: 'panel' }, el('div', { class: 'ph' }, cfgSel, runSel, compBtn, close), canvas, p.legend);
+    // V-5: R4 결과 칸은 "청크" 보기(부모 청크 위에 변경 청크만 교체)와 "교체 전/후" 토글
+    p.chunkBtn = el('button', { title: '부모 청크 위에 변경 청크만 교체해 보기', onclick: () => toggleChunks(p) }, '청크');
+    p.swapBtn = el('button', { title: '교체 전 / 교체 후', onclick: () => swapChunks(p) }, '교체 후');
+    p.swapBtn.hidden = true;
+    const syncChunkBtn = () => { p.chunkBtn.hidden = !(m.runs[p.cfg]?.[p.run]?.chunk_view); };
+    cfgSel.addEventListener('change', syncChunkBtn); runSel.addEventListener('change', syncChunkBtn); syncChunkBtn();
+    p.root = el('div', { class: 'panel' }, el('div', { class: 'ph' }, cfgSel, runSel, compBtn, p.chunkBtn, p.swapBtn, close), canvas, p.legend);
     host.append(p.root);
     p.controls = new OrbitControls(camera, canvas);
     p.controls.target = target;   // 모든 칸이 같은 target 객체를 공유
@@ -155,6 +161,79 @@ function addPanel(cfg = 'src', run = 'r1', host = document.getElementById('panel
   state.panels.push(p);
   buildPanel(p);
   return p;
+}
+
+// ── V-5 청크 보기 ─────────────────────────────────────────────────────────────
+const CHUNK_COLORS = { inherited: 0x9a9aa6, book: 0xff2020, occupancy: 0xffc400, removed: 0x555555 };
+const CHUNK_LABEL = { inherited: '승계(부모 바이트)', book: '변경 — 부기(마스크 ∪ halo)', occupancy: '변경 — 점유 변경으로만', removed: '제거' };
+
+function chunkBox(key, xf, color, dashed) {
+  const [x, y, z] = key.split('_').map(Number);
+  const c = voxelToWorld([4 * x + 1.5, 4 * y + 1.5, 4 * z + 1.5], xf), sz = 4 * xf.scale / 64;
+  const g = new THREE.EdgesGeometry(new THREE.BoxGeometry(sz, sz, sz));
+  const mat = dashed ? new THREE.LineDashedMaterial({ color, dashSize: sz / 6, gapSize: sz / 8 })
+    : new THREE.LineBasicMaterial({ color, transparent: color === CHUNK_COLORS.inherited, opacity: 0.35 });
+  const l = new THREE.LineSegments(g, mat);
+  l.position.set(c[0], c[1], c[2]);
+  if (dashed) l.computeLineDistances();
+  return l;
+}
+
+async function toggleChunks(p) {
+  const m = state.meta;
+  if (p.chunk) {   // 끄기 → 원래 칸으로
+    p.scene.remove(p.chunk.group); p.chunk = null; p.swapBtn.hidden = true; p.chunkBtn.classList.remove('on');
+    if (p.mesh) p.mesh.visible = state.mode !== 'voxel';
+    p.ovGroup.visible = true; document.getElementById('sec-chunks').hidden = true; renderAll(); return;
+  }
+  p.chunkBtn.classList.add('on'); p.legend.textContent = '청크 불러오는 중…';
+  const info = await (await fetch(`/api/scenario_chunks?id=${encodeURIComponent(sid)}&cfg=${p.cfg}&run=${p.run}`)).json();
+  const [par, chg] = await Promise.all([loadGLB(sfile(`chunks_parent:${p.cfg}:${p.run}`)), loadGLB(sfile(`chunks_changed:${p.cfg}:${p.run}`))]);
+  [par, chg].forEach((o) => { prepare(o); o.traverse((x) => x.isMesh && [x.material].flat().forEach((mt) => { if (mt && 'metalness' in mt) { mt.metalness = 0; mt.roughness = 0.8; } }));
+    if (m.runs[p.cfg][p.run].normalize) placeNormalized(o, m.xf); });
+  const boxes = new THREE.Group();
+  const state_ = Object.fromEntries(info.rows.map((r) => [r.key, r.state]));
+  info.rows.forEach((r) => boxes.add(chunkBox(r.key, m.xf, CHUNK_COLORS[r.state], r.state === 'removed')));
+  const group = new THREE.Group(); group.add(par, chg, boxes);
+  p.chunk = { group, par, chg, state: state_, after: true, info };
+  p.scene.add(group);
+  if (p.mesh) p.mesh.visible = false;
+  p.ovGroup.visible = false;
+  p.swapBtn.hidden = false;
+  applySwap(p);
+  showChunkTable(p);
+}
+
+function nodeKey(o) { let x = o; while (x && !/^\d+_\d+_\d+$/.test(x.name)) x = x.parent; return x ? x.name : null; }
+
+function applySwap(p) {
+  const c = p.chunk;
+  // 교체 전 = 부모 청크 전부. 교체 후 = 부모 중 승계 청크만 남기고, 변경 청크 자리에 자식 청크를 넣는다(제거 청크는 비운다).
+  c.par.traverse((o) => { if (o.isMesh) { const k = nodeKey(o); o.visible = !c.after || c.state[k] === 'inherited'; } });
+  c.chg.visible = c.after;
+  p.swapBtn.textContent = c.after ? '교체 후 (→ 교체 전)' : '교체 전 (→ 교체 후)';
+  const n = c.info.counts;
+  p.legend.replaceChildren(...Object.entries(CHUNK_LABEL).map(([k, t]) => el('span', {},
+    el('span', { class: 'sw', style: `background:#${CHUNK_COLORS[k].toString(16).padStart(6, '0')}` }), `${t} ${n[k]} `)));
+  renderAll();
+}
+
+function swapChunks(p) { if (p.chunk) { p.chunk.after = !p.chunk.after; applySwap(p); } }
+
+function showChunkTable(p) {
+  const info = p.chunk.info, sec = document.getElementById('sec-chunks');
+  sec.hidden = false;
+  document.getElementById('chunksFor').textContent = `${p.cfg} ${p.run}`;
+  document.getElementById('chunksNote').textContent = `${info.rule}. 출처: ${info.source}. `
+    + `승계 청크 전부 부모와 바이트 동일: ${info.inherited_all_equal_parent ? '예' : '아니오'}. `
+    + `부모 ${info.parent_dir} · 자식 ${info.child_dir}. 변경·제거 청크를 위로 정렬.`;
+  const order = { book: 0, occupancy: 1, removed: 2, inherited: 3 };
+  const rows = [...info.rows].sort((a, b) => order[a.state] - order[b.state] || a.key.localeCompare(b.key));
+  const head = el('tr', {}, ...['청크 키', '상태', '면 수', '부모 면 수', '바이트', 'sha256', '부모와 바이트 동일'].map((h) => el('th', {}, h)));
+  document.getElementById('chunkTable').replaceChildren(head, ...rows.map((r) => el('tr', {},
+    el('td', { class: 'l' }, r.key), el('td', { class: 'l', style: `color:#${CHUNK_COLORS[r.state].toString(16).padStart(6, '0')}` }, CHUNK_LABEL[r.state]),
+    el('td', {}, r.faces), el('td', {}, r.parent_faces ?? '–'), el('td', {}, r.bytes), el('td', { class: 'l' }, r.sha256),
+    el('td', { class: r.state === 'inherited' ? (r.equal_parent ? 'l good' : 'l bad') : 'l' }, r.state === 'inherited' ? (r.equal_parent ? '예' : '아니오') : '–'))));
 }
 
 function removePanel(p) {
@@ -285,6 +364,10 @@ async function main() {
   await Promise.all(ps.map(waitBuilt));
   const comp = Q.get('comp');
   if (comp != null && ps.length) { const p = ps.find((x) => x.cfg !== 'src') || ps[0]; state.selComp = Number(comp); state.compPanel = p; await buildPanel(p); }
+  if (Q.get('chunks') === '1') {   // V-5 캡처: 첫 R4 칸을 청크 보기로(swap=before 면 교체 전)
+    const p = ps.find((x) => m.runs[x.cfg]?.[x.run]?.chunk_view);
+    if (p) { await toggleChunks(p); if (Q.get('swap') === 'before') swapChunks(p); }
+  }
   setView(Q.get('view') || 'edit');
   document.body.dataset.ready = '1';
 }
