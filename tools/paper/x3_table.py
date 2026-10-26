@@ -14,17 +14,22 @@ SC = RUNS / "paper" / "x3" / "score" / "x3_score.json"
 C4 = RUNS / "paper" / "x3" / "c4"
 
 
+SC_ST = RUNS / "paper" / "x3" / "score_stitched" / "x3_score.json"
+
+
 def table(asset):
-    j = json.loads(SC.read_text())[asset]
+    j0 = json.loads(SC.read_text())[asset]                              # 봉합 전(P0 는 이것뿐)
+    st = (json.loads(SC_ST.read_text()) if SC_ST.exists() else {}).get(asset, {})   # P1·P2 봉합본(chief 22:4x 채택)
+    j = {**j0, **st}
     c4p = C4 / f"{asset}_color.json"
     c4 = json.loads(c4p.read_text()) if c4p.exists() else {}
     sp = SC.parent / "surface_iou.json"
     surf = (json.loads(sp.read_text()) if sp.exists() else {}).get(asset, {})
-    out = [f"**{asset}** — 자기 출발점 대비(own; P0 = 생성 텍스처 GLB, P1·P2 = A_origin R4 .cbin), 누적 마스크 ∪ halo 2 밖. "
+    out = [f"**{asset}** — P1·P2 는 봉합본(R4 + 봉합 띠, chief 22:4x 채택{'' if st else ' — 봉합본 채점 전이라 아직 봉합 전 값'}), 자기 출발점 대비(own; P0 = 생성 텍스처 GLB, P1·P2 = A_origin R4 .cbin), 누적 마스크 ∪ halo 2 밖. "
            f"공통 기준(생성 텍스처 GLB) PSNR 을 함께 적는다. 점유·신규 셀은 A_origin SLat 대비, 마스크 밖.",
            "",
-           "| 경로 | 회차 | CD | F1@0.01 | PSNR(M) | LPIPS(M) | PSNR(M) 공통 | **IoU 표면 셀** | R_keep IoU (참고) | 마스크 밖 신규 셀 | DINO-I | CLIP-T | ΔL* (C4) |",
-           "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+           "| 경로 | 회차 | CD | F1@0.01 | PSNR(M) | LPIPS(M) | PSNR(M) 공통 | **IoU 표면 셀** | R_keep IoU (참고) | 마스크 밖 신규 셀 | DINO-I | CLIP-T | ΔL* (C4) | 봉합 전 CD / PSNR(M) (참고) |",
+           "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for p in ("p0", "p1", "p2"):
         for k in range(1, 6):
             o = j.get(f"{p}_r{k}_own")
@@ -38,7 +43,9 @@ def table(asset):
                        f"{c['image']['psnr']:.2f} | **{surf.get(f'{p}_r{k}', {}).get('iou_surf', float('nan')):.4f}** | "
                        f"{occ.get('rkeep_iou', float('nan')):.4f} | {occ.get('rkeep_new', '–')} | "
                        f"{(im.get('dino_i') or float('nan')):.3f} | {(im.get('clip_t') or float('nan')):.3f} | "
-                       f"{'–' if dl is None else f'{dl:+.1f}'} |")
+                       f"{'–' if dl is None else f'{dl:+.1f}'} | "
+                       + (f"{j0[f'{p}_r{k}_own']['preserved']['cd']:.4f} / {j0[f'{p}_r{k}_own']['image']['psnr']:.2f} |"
+                          if p != "p0" and f"{p}_r{k}_own" in st else "– |"))
     r0 = j.get("p1_r0_common")
     if r0:
         out += ["", f"0회차(P1·P2 출발점 = A_origin R4 .cbin vs 생성 텍스처 GLB): CD {r0['preserved']['cd']:.4f}, F1 {r0['preserved']['f1']:.3f}, "
