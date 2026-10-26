@@ -10,7 +10,7 @@
 2. GPU: `nvidia-smi`
 3. 진행 페이지: `http://117.16.244.35:8083/paper` (X0·X4·X3 진행, X3 회차 격자, 로그 끝부분)
 4. 결과 폴더: `$RUNS_DIR/paper/x3/<자산>/<p0|p1|p2>/r<k>/round.json` 이 있으면 그 회차는 끝난 것이다.
-5. **일시정지된 채점 프로세스(상태 T):** 사용자 지시(16:2x)로 X0·X4 채점을 X3 가 끝날 때까지 SIGSTOP 했다(2026-10-26 16:23:27, PGID 4039842 = `x4_score.py`, PGID 4064024 = `x0_r23.sh` → `x0.py`, Blender 렌더 자식 포함). 기록 `$RUNS_DIR/paper/paused.json`, `/paper` 상단에 PID·상태 표시. 감시 `~/vhl-runs/paper/resume_scoring.sh` 가 자산별 X3 채점을 돌리고 X3_DONE 뒤 `kill -CONT -4039842 -4064024` 로 재개한다. `ps -o pid,stat` 에서 T 인 것은 죽은 것이 아니다 — 다시 띄우지 말고, 감시 스크립트가 죽었으면 X3 가 끝난 뒤 직접 SIGCONT 한다.
+5. **일시정지된 채점 프로세스(상태 T):** X0·X4 채점은 X3 동안 정지(16:23–21:25) 뒤 재개했다가, chief 21:4x 지시로 **X2-A 동안 다시 SIGSTOP**(2026-10-26 21:47, PGID 4039842 = `x4_score.py`, PGID 4064024 = `x0_r23.sh` → `x0.py`, Blender 렌더 자식 포함). 기록 `$RUNS_DIR/paper/paused.json`(이전 정지 이력 포함), `/paper` 상단 표시. **X2-A 가 끝나면(`$RUNS_DIR/paper/x2a.log` 에 `X2A_P0_DONE`) `kill -CONT -4039842 -4064024` 로 재개한다** — 자동 감시는 없다. `ps -o pid,stat` 에서 T 인 것은 죽은 것이 아니다, 다시 띄우지 않는다.
 
 - **X3 실행기(`tools/paper/x3.py`)가 살아 있으면 건드리지 않는다.** 죽어 있으면 같은 명령으로 다시 띄운다. 실행기는 `round.json` 이 있는 회차를 건너뛰고, 끝나지 않은 회차 폴더는 지우고 그 회차부터 다시 한다(코드확인, x3.py 170–182, 284–292). 마지막으로 띄운 명령은 셸 기록이나 로그 머리에서 찾는다.
 - **X0 r2·r3 채점·X4 채점**도 같은 방식으로 살아 있는지 보고, 죽었으면 다시 띄운다(`X0_RUNS`, `tools/paper/x0.py`·`x0_cbin.py`·`x4_score.py`). 이미 쓴 결과 JSON 은 그대로 둔다.
