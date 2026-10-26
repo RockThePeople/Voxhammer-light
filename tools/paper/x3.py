@@ -16,7 +16,10 @@ P2 (절제): P1 과 같고, 편집 전에 직전 결과를 150시점 재등록�
     항등(bbox 정확히 [−0.5, 0.5]³)이 되어 재등록 SLat 이 raw 64³ 격자에 그대로 놓인다(마스크 셀·R4 부모 승계를 P1 과 같게).
     표지가 만드는 격자 꼭짓점 셀은 특징 추출 전에 voxels.ply 에서 뺀다. 첫 실행은 150시점 중 3장을 시트로 남긴다.
 
+보기용 view.glb(chief 15:2x 4a): P1·P2 는 output.glb(정점색) 에 (iv) 보정, P0 는 to_glb 결과(output.glb) 링크 — 웹·VSCode glTF 뷰어용.
+
     python tools/paper/x3.py run p0|p1|p2 [자산 …]
+    python tools/paper/x3.py views            # 이미 끝난 회차의 view.glb 채우기(CPU)
 """
 from __future__ import annotations
 
@@ -137,6 +140,18 @@ def inpaint_int4(d, prompt):
     return {"device": "rtx3090", "model": "INT4 worker", "job_id": r["job_id"], "sha256": r.get("result", {}).get("sha256")}
 
 
+def write_view(d, path):
+    """회차 폴더 d 의 view.glb."""
+    o, v = Path(d) / "output.glb", Path(d) / "view.glb"
+    if not o.exists() or v.exists():
+        return
+    if path == "p0":
+        v.symlink_to("output.glb")
+    else:
+        from editcore.render import vertex_color_render_glb
+        v.write_bytes(vertex_color_render_glb(o.read_bytes()))
+
+
 def sha(p):
     import hashlib
     return hashlib.sha256(Path(p).read_bytes()).hexdigest()
@@ -186,6 +201,7 @@ def run_p0(asset):
                "mask_fingerprint": info["mask_fingerprint"], "C": C.tolist(), "T": T.tolist(), "inpaint": inp,
                "files_sha256": {n: sha(d / n) for n in ("2d_render.png", "2d_mask.png", "2d_edit.png", "output.glb")},
                "wall_s": time.time() - t0, "note": "C = v0 → 이번 회차 입력·출력 좌표(포크 정규화를 미리 건 in.glb 좌표)"}
+        write_view(d, "p0")
         (d / "round.json").write_text(json.dumps(rec, indent=1))
         print(f"x3 p0 {asset} r{k} done {rec['wall_s']:.0f}s", flush=True)
 
@@ -298,6 +314,7 @@ def run_p12(asset, path):
                "rereg": rr, "r4": {"sent": len(r4.get("sent", [])), "reused": len(r4.get("reused", [])), "seam": r4.get("seam", {}).get("snapped")},
                "files_sha256": {n: sha(d / n) for n in ("2d_render.png", "2d_mask.png", "2d_edit.png", "output.glb")},
                "wall_s": time.time() - t0}
+        write_view(d, path)
         (d / "round.json").write_text(json.dumps(rec, indent=1))
         print(f"x3 {path} {asset} r{k} done {rec['wall_s']:.0f}s sent {rec['r4']['sent']} reused {rec['r4']['reused']}", flush=True)
 
@@ -305,6 +322,9 @@ def run_p12(asset, path):
 if __name__ == "__main__":
     if sys.argv[1] == "_rereg":
         _rereg(*sys.argv[2:6])
+    elif sys.argv[1] == "views":
+        for d in sorted(OUT.glob("p[012]/*/r[0-5]")):
+            write_view(d, d.parts[-3])
     elif sys.argv[1] == "run":
         path, names = sys.argv[2], sys.argv[3:] or list(ASSET_NAMES)
         for n in names:
