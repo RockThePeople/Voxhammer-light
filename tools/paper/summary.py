@@ -159,7 +159,7 @@ def x4_table():
             rows.append(f"| {lab} | {k} | {_mean([_m(r, 'cd') for r in rs]):.4f} | {_mean([_m(r, 'f1') for r in rs]):.3f} | "
                         f"{_mean([_m(r, 'psnr') for r in rs]):.2f} | {_mean([_m(r, 'lpips') for r in rs]):.4f} | "
                         + ("–" if iou is None else f"{iou:.4f}") + " |")
-    return rows + ["", f"채점된 자산 {len(assets)}/11({', '.join(assets)})의 평균 — 나머지 5자산은 채점하지 않고 마무리(사용자 지시). "
+    return rows + ["", f"채점된 자산 {len(assets)}/11 평균. "
                        "기준 = 자기 출발점(P0 = 생성·원본 GLB = 공통 기준, P1 = 원본 SLat 의 R4 `.cbin`) 또는 공통 기준(원본 GLB), 편집 없음, 전체 영역. "
                        "P1 은 같은 SLat 을 다시 디코딩할 뿐이라 자기 출발점과 같은 메시이고(∞), 공통 기준 대비 값은 회차와 무관하게 R4 메시 표현 차이만 남는다. "
                        "P1 공통 기준 행의 PSNR(M) 차이는 R4 정점색 메시 대 텍스처 GLB 렌더 차이(전체 표면 형상 지표 — 가려진 내부 면 포함)."]
@@ -194,7 +194,25 @@ def x2a_table():
                 f"{f(m['gc'], '.4f')} | {f(m['cc'], '.4f')} | {f(m['p0d'], '.3f')} | {f(m['gd'], '.3f')} | {f(m['p0t'], '.3f')} | {f(m['gt'], '.3f')} |")
     return rows + ["", f"P0 = 원저자 경로(재등록 + 25 스텝 + `to_glb`), 채점된 시나리오 {n}/14 · 시나리오당 r1·r2 중 채점된 회차 평균. "
                        "P1 = E2a c15(W34 재사용 + 15/15) r1–r3 중 채점된 회차 평균 — P1-glb(`to_glb`)·P1-cbin(R4 + 봉합). 조건 이미지 = 동결본(A5000 bf16). "
-                       "기준 = 원본 v0, 마스크 ∪ halo 2 밖. **비열등성 검정은 하지 않고 마무리(사용자 지시)** — 표는 평균만."]
+                       "기준 = 원본 v0, 마스크 ∪ halo 2 밖."] + x2a_test()
+
+
+def x2a_test():
+    t = j(RUNS / "paper" / "x2a" / "score" / "tost.json")
+    if not t:
+        return ["", "비열등성 검정: 채점 중."]
+    lab = {"psnr": "PSNR(M)", "ssim": "SSIM(M)", "lpips": "LPIPS(M)", "dino_i": "DINO-I", "clip_t": "CLIP-T", "cd": "CD"}
+    rows = ["", "**단측 비열등성 검정(chief 보정 7):** 시나리오 평균 쌍 차이 d = P1 − P0(P0 2회, P1 3회), H0: 좋은 방향 기준 d ≤ −한계(E19), n = 14, α = 0.05. "
+                "우위 p = H0: 좋은 방향 기준 d ≤ 0.", "",
+            "| P1 | 지표 | 한계 | P0 평균 | P1 평균 | d | 비열등 p | 비열등 | 우위 p | P1 이 한계 넘게 좋은/나쁜 시나리오 |",
+            "|---|---|---|---|---|---|---|---|---|---|"]
+    for cfg in ("P1-glb", "P1-cbin(봉합)"):
+        for m, v in (t.get(cfg) or {}).items():
+            fmt = ".4f" if m in ("cd", "ssim", "lpips") else (".2f" if m == "psnr" else ".3f")
+            rows.append(f"| {cfg} | {lab[m]} | {v['margin']} | {format(v['p0_mean'], fmt)} | {format(v['p1_mean'], fmt)} | {v['d_mean']:+{fmt}} | "
+                        f"{v['p_noninferiority']:.2g} | {'**예**' if v['noninferior'] else '아니오'} | {v['p_superiority']:.2g} | "
+                        f"{v['p1_better_beyond_margin']} / {v['p1_worse_beyond_margin']} |")
+    return rows
 
 
 def x2b_table():
@@ -216,7 +234,7 @@ def x2b_table():
 
 def md():
     L = ["## 결과 요약 (논문용 표)", "",
-         "모든 수치는 실측이고, 원자료·정의는 아래 각 절에 있다. 생성 `tools/paper/summary.py`. **사용자 지시(10-27 01:4x)로 추가 계산(보이는 표면·고정 영역·X2-A 검정) 없이 그 시점까지 채점된 결과로 마무리했다** — 각 표에 채점된 건수·회차를 적는다.", "",
+         "모든 수치는 실측이고, 원자료·정의는 아래 각 절에 있다. 생성 `tools/paper/summary.py`. **사용자 지시(10-27 01:4x)로 추가 계산(보이는 표면·고정 영역)은 하지 않았고, 예정된 채점(X0 r1–r3, X4 11자산, X2-A·X2-B, X2-A 비열등성 검정)은 모두 마쳤다(03:38).** 각 표에 건수·회차를 적는다.", "",
          "### S1. X3 연속 5회 편집 (P1·P2 = 봉합본)", ""]
     L += x3_tables()
     L += ["### S2. C4 색 표류 (보존 영역 표면 색, A_origin 대비)", ""]
