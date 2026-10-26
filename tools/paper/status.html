@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>논문 실험 진행</title>
+<style>
+:root { --bg:#f7f7f5; --card:#fff; --fg:#1d1d1b; --mut:#6b6b66; --line:#e3e2dc; --acc:#2f6fdb; --ok:#2e8b57; --run:#d98a00; --pend:#c9c8c1; }
+@media (prefers-color-scheme: dark) { :root { --bg:#161615; --card:#1f1f1d; --fg:#ecebe6; --mut:#9b9a93; --line:#33322f; --acc:#6c9cf0; --ok:#4fb37c; --run:#f0a830; --pend:#4a4945; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui, -apple-system, "Segoe UI", "Noto Sans KR", sans-serif; }
+header { padding:14px 16px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:8px 18px; align-items:baseline; }
+h1 { font-size:17px; margin:0; }
+.mut { color:var(--mut); }
+main { padding:14px 16px; max-width:1400px; margin:0 auto; display:grid; gap:14px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+.card h2 { font-size:14px; margin:0 0 4px; display:flex; gap:8px; align-items:center; }
+.tag { font-size:11px; padding:1px 7px; border-radius:10px; color:#fff; background:var(--pend); }
+.tag.done { background:var(--ok); } .tag.running { background:var(--run); }
+.bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; margin:6px 0 4px; }
+.bar > i { display:block; height:100%; background:var(--acc); }
+table { border-collapse:collapse; width:100%; }
+.x3 { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:8px; }
+.x3 td, .x3 th { padding:4px; vertical-align:top; text-align:center; font-size:12px; }
+.x3 th { color:var(--mut); font-weight:500; }
+.cell { width:132px; border:2px solid var(--pend); border-radius:6px; padding:3px; }
+.cell.done { border-color:var(--ok); } .cell.running { border-color:var(--run); } .cell.start { border-color:var(--acc); }
+.cell img { width:120px; height:120px; object-fit:contain; background:#fff; border-radius:4px; display:block; margin:0 auto 2px; }
+.cell .ph { width:120px; height:120px; display:flex; align-items:center; justify-content:center; color:var(--mut); margin:0 auto 2px; }
+.rowh { text-align:left !important; font-weight:600; white-space:nowrap; }
+pre { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:8px 10px; overflow-x:auto; font-size:12px; margin:0; white-space:pre-wrap; }
+.kv td { padding:2px 8px 2px 0; font-size:12px; }
+a { color:var(--acc); }
+</style>
+</head>
+<body>
+<header>
+  <h1>논문 실험 진행 (a5000)</h1>
+  <span class="mut" id="time"></span>
+  <span id="gpu"></span>
+  <span class="mut">10초마다 갱신 · <a href="/">뷰어 목록</a></span>
+</header>
+<main>
+  <div class="cards" id="cards"></div>
+  <section>
+    <h2 style="font-size:15px;margin:4px 0 8px">X3 연속 5회 편집 <span class="mut" id="x3sum" style="font-weight:400;font-size:13px"></span></h2>
+    <div class="x3"><table id="x3"></table></div>
+    <p class="mut" style="font-size:12px;margin:6px 0 0">칸 그림 = 그 회차 2D 편집 조건(2d_edit). 0회차 = 출발점. 칸을 누르면 조건 렌더 원본. 녹색 완료 · 주황 진행 중 · 회색 대기. 마스크는 승인본(14:52).</p>
+  </section>
+  <section><h2 style="font-size:15px;margin:4px 0 8px">실행 중 프로세스</h2><pre id="procs"></pre></section>
+  <section><h2 style="font-size:15px;margin:4px 0 8px">X3 로그 끝</h2><pre id="log"></pre></section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (s) => s == null ? '–' : s >= 3600 ? `${(s/3600).toFixed(1)} h` : s >= 60 ? `${Math.round(s/60)} 분` : `${Math.round(s)} s`;
+const img = (p) => `/pimg?p=${encodeURIComponent(p)}`;
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function card(e) {
+  let done = 0, total = 0, state = e.state || 'pending', extra = '';
+  if (e.id === 'X0') { done = e.done; total = e.total;
+    const m = e.means['c15-glb'], b = e.means['base'];
+    if (m && b) extra = `<table class="kv"><tr><td>보존 CD</td><td>${b.cd.toFixed(4)} → ${m.cd.toFixed(4)}</td></tr><tr><td>PSNR(M)</td><td>${b.psnr.toFixed(2)} → ${m.psnr.toFixed(2)}</td></tr><tr><td>CLIP-T 6시점</td><td>${b.clip_t_front6.toFixed(4)} → ${m.clip_t_front6.toFixed(4)}</td></tr></table><div class="mut" style="font-size:12px">base(25) → c15 P1-glb, 14건 평균</div>`; }
+  if (e.id === 'X4') { done = e.p0 + e.p1; total = 2 * e.total;
+    extra = `<div class="mut" style="font-size:12px">P0 ${e.p0}/${e.total} · P1 ${e.p1}/${e.total}${e.empty_mask_edit ? ' · 빈 마스크 편집: ' + esc(e.empty_mask_edit.empty_mask_edit) : ''} · 채점 ${e.scored.length ? e.scored.length + '개' : '대기'}</div>`; }
+  if (e.id === 'X3') { done = e.total_done; total = e.total;
+    extra = `<div class="mut" style="font-size:12px">P0 ${e.done.p0}/15 · P1 ${e.done.p1}/15 · P2 ${e.done.p2}/15 · 남은 시간 약 ${fmt(e.eta_s)}</div>`; }
+  if (total) state = done >= total ? 'done' : (done > 0 || e.running) ? 'running' : 'pending';
+  const lab = {done:'완료', running:'진행 중', pending:'대기'}[state];
+  return `<div class="card"><h2>${e.id} <span class="tag ${state}">${lab}</span></h2><div class="mut" style="font-size:12px">${esc(e.title)}</div>
+    ${total ? `<div class="bar"><i style="width:${(100*done/total).toFixed(1)}%"></i></div><div style="font-size:12px">${done} / ${total}</div>` : ''}
+    ${extra}${e.note ? `<div class="mut" style="font-size:12px">${esc(e.note)}</div>` : ''}</div>`;
+}
+
+function x3table(e) {
+  let h = '<tr><th></th>' + [0,1,2,3,4,5].map((k) => `<th>${k ? k + '회차' : '출발점'}</th>`).join('') + '</tr>';
+  for (const [key, row] of Object.entries(e.grid)) {
+    const [path, asset] = key.split('/');
+    h += `<tr><td class="rowh">${asset}<br><span class="mut">${path.toUpperCase()}</span></td>`;
+    for (const c of row) {
+      const pic = c['2d_edit'] || (c.round === 0 ? null : c['2d_render']);
+      const inner = pic ? `<a href="${img(c['2d_render'] || pic)}" target="_blank"><img loading="lazy" src="${img(pic)}"></a>`
+                        : `<div class="ph">${c.round === 0 ? (c.state === 'start' ? '준비됨' : '–') : c.state === 'running' ? '진행 중' : '대기'}</div>`;
+      let sub = '';
+      if (c.state === 'done') sub = `완료 ${fmt(c.wall_s)}${c.r4 ? ` · 새 청크 ${c.r4.sent}` : ''}`;
+      else if (c.state === 'running') sub = `<b style="color:var(--run)">${esc(c.stage || '시작')}</b>`;
+      else if (c.part) sub = `<span class="mut">${esc(c.part)}</span>`;
+      h += `<td><div class="cell ${c.state}" title="${esc(c.prompt || '')}">${inner}<div>${sub}</div></div></td>`;
+    }
+    h += '</tr>';
+  }
+  return h;
+}
+
+async function tick() {
+  try {
+    const s = await (await fetch('/api/paper', {cache: 'no-store'})).json();
+    $('time').textContent = s.time;
+    $('gpu').textContent = s.gpu ? `GPU ${s.gpu.name} · ${(s.gpu.mem_used_mib/1024).toFixed(1)}/${(s.gpu.mem_total_mib/1024).toFixed(0)} GiB · ${s.gpu.util}%` : '';
+    $('cards').innerHTML = s.experiments.map(card).join('');
+    const x3 = s.experiments.find((e) => e.id === 'X3');
+    $('x3').innerHTML = x3table(x3);
+    $('x3sum').textContent = `${x3.total_done}/45 · 회당 평균 P0 ${fmt(x3.mean_wall_s.p0)} · P1 ${fmt(x3.mean_wall_s.p1)} · P2 ${fmt(x3.mean_wall_s.p2)}` + (x3.rereg_sheet ? ' · P2 재등록 색 확인 시트 있음' : '');
+    $('procs').textContent = s.procs.length ? s.procs.map((p) => `${p.pid}  ${fmt(p.elapsed_s).padStart(6)}  ${p.what}`).join('\n') : '(없음)';
+    $('log').textContent = x3.log.join('\n') || '(없음)';
+  } catch (err) { $('time').textContent = '갱신 실패: ' + err; }
+  document.body.dataset.ready = '1';   // tools/viewer/capture.mjs 가 기다리는 표시
+}
+tick(); setInterval(tick, 10000);
+</script>
+</body>
+</html>
