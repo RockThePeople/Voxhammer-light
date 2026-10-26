@@ -132,3 +132,26 @@
 - c15-cbin 대 c15-glb: 같은 SLat 인데 보존 CD 0.0034 → 0.0045, F1 0.985 → 0.942, NC 0.963 → 0.952, PSNR(M) −1.1 dB. 예상대로 R4 메시의 가려진 내부 면(`to_glb` 가 지우던 면)과 정점색 렌더 차이 몫이다. E19 넘는 칸(c15-cbin − base): PSNR 5, SSIM 10, LPIPS 10, CD 2, CLIP-T 6 1, DINO-I 1 3. 논문에 어느 메시를 쓸지는 사용자 결정(지시서 보정 1).
 - 정렬 확인(v0 셀 → v0 메시 1셀 이내) 평균 0.975.
 
+
+## 8. 보기용 GLB(view.glb)와 웹 뷰어 색 처리 (chief 15:2x 4)
+
+**a. view.glb (코드확인):**
+- P1·P2(.cbin → glbbuild 정점색 GLB) 결과마다 `view.glb` = `editcore/render.py:vertex_color_render_glb` (iv) 보정본. COLOR_0 sRGB → 선형 float32, 재질이 없는 프리미티브에 to_glb 와 같은 재질(baseColor 1, roughness 1, metallic 생략 = 1.0).
+- P0 는 to_glb 결과를 그대로 쓴다(`view.glb` → `output.glb` 링크).
+- 위치: X3 회차 폴더마다(`runs/paper/x3/<경로>/<자산>/r0..r5/view.glb`, 새 회차는 `tools/paper/x3.py:write_view` 가 자동으로 만든다), X0 c15-cbin `runs/paper/x0/cbin/<시나리오>/[r2|r3/]view.glb`(`tools/paper/x0_cbin.py`).
+- 파일 확인(실측): glbbuild 원본 COLOR_0 = uint8 정규화(componentType 5121), view.glb = float32(5126).
+
+**b. 뷰어·평가 페이지가 그리는 방식 (코드확인):**
+- **T1 뷰어 항목 페이지(`tools/viewer/view.html`):** 기본 모델을 `view.glb` 로 바꿨다(`?model=` 로 고를 수 있다).
+- **T1 시나리오 페이지(`scenario.js`):** 정점색을 화면에서만 선형으로 바꾸던 처리를, COLOR_0 이 이미 float32 인 GLB(view.glb)에는 건너뛰게 했다(두 번 어두워지는 것을 막음).
+- **색 공간:** three.js r160 기본값 — `renderer.outputColorSpace = SRGBColorSpace`, GLTFLoader 가 baseColor 텍스처를 `SRGBColorSpace` 로, COLOR_0 은 규격대로 선형으로 읽는다. 톤 매핑 없음(NoToneMapping).
+- **조명:** 환경맵 없이 HemisphereLight 1.6 + DirectionalLight 1.6·0.6(`common.js:addLights`)이 모든 GLB 에 같다. 카메라는 bbox 로 잡는다(`common.js:frame`). P0 와 P1·P2 의 재질이 같아(metallic 1.0, roughness 1) 같은 조건으로 그려진다.
+- **x3-eval·캡처 시트:** GLB 를 브라우저에서 그리지 않고 Bench `render.py`(Blender) 16시점 렌더 PNG 를 쓴다. P1·P2 는 렌더 전에 같은 (iv) 보정을 거친다(`tools/paper_metrics.py:n_frame_glb`). 세 경로가 같은 카메라·조명이다.
+
+**c. 확인 한 건 (실측, T1 뷰어 항목 페이지, 같은 시점 — bbox 0.406 vs 0.405 로 카메라가 같다):**
+
+![A-M1 c15: to_glb | view.glb | 보정 없는 .cbin GLB](img/X-paper-view-glb-A-M1.png)
+
+- to_glb(텍스처)와 view.glb((iv))는 색·밝기가 같은 쪽이다.
+- 보정 없는 .cbin GLB 는 밝고 옅다(sRGB 값을 선형으로 읽은 결과).
+- R4 3-8 Blender (iv) 시트와 같은 방향이다.
