@@ -174,7 +174,9 @@ def main():
             if lines:
                 t = json.loads(lines[-1])
                 rec.update(timing=t.get("timings"), view=t.get("view"), render_attempts=t.get("render_attempts"),
-                           edit_sha256=t.get("edit_sha256"), inpaint_reused=t.get("inpaint_reused"))
+                           edit_sha256=t.get("edit_sha256"), inpaint_reused=t.get("inpaint_reused"),
+                           job_id=t.get("job_id"), render_a5000=t.get("render_a5000"),
+                           edit_stats_a5000=t.get("edit_stats_a5000"))
             res["runs"].append(rec)
             tm = rec.get("timing") or {}
             print(f"{sid} r{k} {'ok' if rec['ok'] else 'FAIL ' + str(rec.get('error_code'))} wall {rec['wall_s']:.1f}s "

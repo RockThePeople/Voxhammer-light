@@ -1,0 +1,4 @@
+{"_source": "A5000 item/04L-link-a5000 9cf1fda services/a5000_edit/seed.py — 트랙 A 시드 판본 v1(커밋됨). 편집은 staging 만 만들고 커밋하지 않으므로 3회 모두 v1 에서 출발한다",
+ "moto": {"asset_id": "vhl-ta-moto", "base_version": 1},
+ "snowman": {"asset_id": "vhl-ta-snowman", "base_version": 1},
+ "chair": {"asset_id": "vhl-ta-chair", "base_version": 1}}
