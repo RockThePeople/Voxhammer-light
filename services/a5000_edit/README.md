@@ -4,12 +4,12 @@
 
 ```
 bash services/a5000_edit/run.sh          # 0.0.0.0:8082 (EDIT_PORT), 모델 상주 로드 후 요청 받음
-curl -H "X-Blockedit-Key: $TRELLIS_API_KEY" http://<EDIT_HOST>:8082/v2/trellis/health
+curl http://<EDIT_HOST>:8082/v2/trellis/health
 ```
 
-- 인증: `X-Blockedit-Key` = `TRELLIS_API_KEY`(.env, 없으면 `dev-key`). 3090 쪽 키와 같아야 한다.
+- 인증: 기본 끔(04L 지시). `VHL_WORKER_AUTH=1` 이면 `X-Blockedit-Key` = `TRELLIS_API_KEY`(.env, 없으면 `dev-key`)를 검사한다. 헤더를 보내도 무해하다.
 - 저장소: `RUNS_DIR/04l/store`(판본·staging, 현행 서비스와 같은 구조), 렌더 기록 `RUNS_DIR/04l/renders`(24 h, 재기동 유지).
-- 시드 판본: 트랙 A 생성 자산 `vhl-ta-moto`·`vhl-ta-snowman`·`vhl-ta-chair` v1(`seed.py`). 3090 은 같은 asset_id·v1 을 기준 판본으로 쓴다.
+- 시드 판본: 트랙 A 생성 자산 `vhl-ta-moto`·`vhl-ta-snowman`·`vhl-ta-chair` v1(`seed.py`). 3090 은 같은 asset_id·v1 을 기준 판본으로 쓴다. 종단 반복용 복제 `<id>-e2e-r1..r3`(같은 v1)와 시나리오별 asset_id·base_version·동결 편집 시점은 `assets_track_a.json`.
   v1 매니페스트: `GET /v2/trellis/assets/<id>/v1/manifest.json`, 청크: `GET /v2/trellis/assets/<id>/chunks/<key>.v1.cbin`.
 - 편집: editcore(15/15, W34 입력 = 부모 판본 slat_tgt) → R4 `.cbin`(부기 ∪ 점유 변경 ∪ 신규, R11 승계, 경계 스냅) → staging.
   `POST /v2/trellis/assets/<id>/commit` 으로 판본 승격(현행과 같음).

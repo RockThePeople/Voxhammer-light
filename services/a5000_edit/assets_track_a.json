@@ -1,0 +1,89 @@
+{
+ "note": "04L 트랙 A 종단 자산. base_version 은 시드 v1. edit_view 는 동결 시나리오(scenarios/track_a.json) 값. e2e_clones 는 같은 v1 복제로, 종단 반복 회차마다 하나씩 쓴다.",
+ "scenarios": {
+  "A-M1": {
+   "asset": "moto",
+   "asset_id": "vhl-ta-moto",
+   "base_version": 1,
+   "edit_view": 3,
+   "prompt": "a red and gold Iron Man helmet as the rider's head",
+   "mask": "track_a/moto/masks/A-M1.mask.json",
+   "mask_fingerprint": "c8d28b2c68375b9617c0a7018e4feb95c95dee4347d66fb9aaa0c5f4471aedf9",
+   "e2e_clones": [
+    "vhl-ta-moto-e2e-r1",
+    "vhl-ta-moto-e2e-r2",
+    "vhl-ta-moto-e2e-r3"
+   ]
+  },
+  "A-M2": {
+   "asset": "moto",
+   "asset_id": "vhl-ta-moto",
+   "base_version": 1,
+   "edit_view": 0,
+   "prompt": "a thick chunky knobby off-road rear tire",
+   "mask": "track_a/moto/masks/A-M2.mask.json",
+   "mask_fingerprint": "24b2cf6d3d3865410b1975f8774571a533a6c22d5ffa24a1f01ab26a04323cb1",
+   "e2e_clones": [
+    "vhl-ta-moto-e2e-r1",
+    "vhl-ta-moto-e2e-r2",
+    "vhl-ta-moto-e2e-r3"
+   ]
+  },
+  "A-S1": {
+   "asset": "snowman",
+   "asset_id": "vhl-ta-snowman",
+   "base_version": 1,
+   "edit_view": 1,
+   "prompt": "a snowman holding a straw broom in its right hand",
+   "mask": "track_a/snowman/masks/A-S1.mask.json",
+   "mask_fingerprint": "5bb923f6681316263da1f20eb4d6e38c4abcc361109105731c619913f61e9f71",
+   "e2e_clones": [
+    "vhl-ta-snowman-e2e-r1",
+    "vhl-ta-snowman-e2e-r2",
+    "vhl-ta-snowman-e2e-r3"
+   ]
+  },
+  "A-S2": {
+   "asset": "snowman",
+   "asset_id": "vhl-ta-snowman",
+   "base_version": 1,
+   "edit_view": 4,
+   "prompt": "a small round red ball nose",
+   "mask": "track_a/snowman/masks/A-S2.mask.json",
+   "mask_fingerprint": "1996548c340e662f4955a094efdbc0ef4e9fe1ebba355b30e90c3e274f39afe3",
+   "e2e_clones": [
+    "vhl-ta-snowman-e2e-r1",
+    "vhl-ta-snowman-e2e-r2",
+    "vhl-ta-snowman-e2e-r3"
+   ]
+  },
+  "A-C1": {
+   "asset": "chair",
+   "asset_id": "vhl-ta-chair",
+   "base_version": 1,
+   "edit_view": 2,
+   "prompt": "a tall backrest with vertical wooden slats",
+   "mask": "track_a/chair/masks/A-C1.mask.json",
+   "mask_fingerprint": "5721aa432ddfb950ade898ed3b6c4509d8653907527ea8b1784946c79d482f3f",
+   "e2e_clones": [
+    "vhl-ta-chair-e2e-r1",
+    "vhl-ta-chair-e2e-r2",
+    "vhl-ta-chair-e2e-r3"
+   ]
+  },
+  "A-C2": {
+   "asset": "chair",
+   "asset_id": "vhl-ta-chair",
+   "base_version": 1,
+   "edit_view": 1,
+   "prompt": "the chair without armrests, plain seat sides",
+   "mask": "track_a/chair/masks/A-C2.mask.json",
+   "mask_fingerprint": "9e6095bd3963c26edcebc624691a278157a7b10a20b6fb312fa5b8497d8f8344",
+   "e2e_clones": [
+    "vhl-ta-chair-e2e-r1",
+    "vhl-ta-chair-e2e-r2",
+    "vhl-ta-chair-e2e-r3"
+   ]
+  }
+ }
+}

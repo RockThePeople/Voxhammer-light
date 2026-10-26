@@ -63,8 +63,11 @@ def _meta(aid, rec, **kw):
 H = {"X-Blockedit-Key": "k"}
 
 
-def test_auth_required(client):
+def test_auth_off_by_default_and_enforced_when_on(client, monkeypatch):
     c, A, aid = client
+    r = c.post("/v2/trellis/edit", json={})
+    assert r.status_code != 401                     # 기본 끔: 키 없이 통과(본문 검사에서 걸린다)
+    monkeypatch.setattr(A, "AUTH", True)
     r = c.post("/v2/trellis/edit", json={})
     assert r.status_code == 401 and r.json()["error_code"] == "UNAUTHORIZED"
 

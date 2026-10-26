@@ -9,7 +9,7 @@
     GET  /v2/trellis/health
 
 경로·응답 모양·오류 본문은 현행 서비스(`legacy/a5000/edit_service/api/routes.py`)를 따른다. 편집 연산만 editcore 로 바꿨다.
-인증: X-Blockedit-Key = TRELLIS_API_KEY(.env). 기동: `bash services/a5000_edit/run.sh` (README).
+인증: 기본 끔(04L 지시 — 인증 불요). VHL_WORKER_AUTH=1 이면 X-Blockedit-Key = TRELLIS_API_KEY(.env) 를 검사한다. 기동: `bash services/a5000_edit/run.sh` (README).
 """
 from __future__ import annotations
 
@@ -40,6 +40,7 @@ from deltacontract.errors import (DeltaContractError, InvalidRequest, NotFound, 
 from services.a5000_edit import jobs, store  # noqa: E402
 
 API_KEY = os.environ.get("TRELLIS_API_KEY", "dev-key")
+AUTH = os.environ.get("VHL_WORKER_AUTH", "0") == "1"
 RENDER_TTL_S = 24 * 3600
 RENDER_ROOT = Path(os.environ.get("VHL_RENDER_ROOT") or Path(os.environ.get("RUNS_DIR", "runs")) / "04l" / "renders")
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
@@ -63,6 +64,8 @@ class BadConditionImage(DeltaContractError):
 
 
 def require_key(x_blockedit_key: str = Header(None)):
+    if not AUTH:
+        return
     if x_blockedit_key is None:
         raise Unauthorized("X-Blockedit-Key 없음")
     if x_blockedit_key != API_KEY:
