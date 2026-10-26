@@ -1,4 +1,4 @@
-"""X2-A P0 (ops/tasks/X-paper.md X2-A): 동결 14건 × 3회, 원저자 경로 `reference/run_reference.py --mode original --seed 0`
+"""X2-A P0 (ops/tasks/X-paper.md X2-A): 동결 14건 × 2회(사용자 23:18 축소, 원래 3회), 원저자 경로 `reference/run_reference.py --mode original --seed 0`
 (150시점 재등록 + 25 스텝 + to_glb, 포크 무수정, `--reuse_render` 없음). 조건 이미지 = 동결본(cond/), 마스크 = 동결 셀.
 
 포크는 입력 GLB 를 bbox 로 정규화(normalize_scene)해 인코딩하고 마스크 GLB 는 정규화 없이 복셀화한다(X3 P0 와 같음).
@@ -28,7 +28,7 @@ from tools.paper.x3 import PY, REF, affine, glb_bbox, sh, sha, transform_glb  # 
 
 RUNS = Path(os.environ["RUNS_DIR"])
 OUT = RUNS / "paper" / "x2a" / "p0"
-RUN_IDS = ("r1", "r2", "r3")
+RUN_IDS = ("r1", "r2")          # 사용자 23:18 축소: P0 14건 × 2회(r3 없음)
 
 
 def mask_glb_v0(sid, s):
