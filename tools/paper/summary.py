@@ -99,9 +99,124 @@ def human_table():
             [f"| {lab[q]} | {t[q]['p0']} | **{t[q]['p1']}** | {t[q]['p2']} | {sum(t[q].values())} |" for q in t])
 
 
+def _mean(v):
+    v = [x for x in v if x is not None]
+    return float(sum(v) / len(v)) if v else None
+
+
+def _m(r, m):
+    return r["preserved"][m] if m in ("cd", "f1", "nc") else r["image"].get(m)
+
+
+def _x0_runs():
+    """r1 은 14건 모두 x0.json(먼저 채점), r2·r3 는 x0_runs.json(채점된 만큼)."""
+    runs = j(RUNS / "paper" / "x0" / "x0_runs.json")
+    for sid, cfgs in j(RUNS / "paper" / "x0" / "x0.json").items():
+        runs.setdefault(sid, {}).setdefault("r1", {})
+        for c, v in cfgs.items():
+            runs[sid]["r1"].setdefault(c, v)
+    return runs
+
+
+def x0_table():
+    runs = _x0_runs()
+    st = j(RUNS / "paper" / "x0" / "x0_runs_st.json")
+    rows = ["| 설정 | 시나리오 | 회차(합) | CD ↓ | F1 ↑ | PSNR(M) ↑ | SSIM(M) ↑ | LPIPS(M) ↓ | DINO-I(편집 시점) ↑ | CLIP-T(편집 시점) ↑ | CLIP-T 6시점 ↑ | DINO-I 16시점 ↑ |",
+            "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for cfg, J, lab in (("base", runs, "base(25 스텝, `to_glb`)"), ("c15-glb", runs, "P1-glb(15 스텝, `to_glb`)"),
+                        ("c15-cbin-st", st, "P1-cbin(15 스텝, R4 + 봉합)"), ("c15-cbin", runs, "참고: P1-cbin 봉합 전")):
+        per = {}
+        for sid, rr in J.items():
+            got = [rr[r][cfg] for r in ("r1", "r2", "r3") if r in rr and cfg in rr[r]]
+            if got:
+                per[sid] = got
+        if not per:
+            continue
+        nr = sum(len(v) for v in per.values())
+        vals = {m: _mean([_mean([_m(x, m) for x in v]) for v in per.values()])
+                for m in ("cd", "f1", "psnr", "ssim", "lpips", "dino_i", "clip_t", "clip_t_front6", "dino_i_ref16")}
+        rows.append(f"| {lab} | {len(per)} | {nr} | {vals['cd']:.4f} | {vals['f1']:.3f} | {vals['psnr']:.2f} | {vals['ssim']:.4f} | "
+                    f"{vals['lpips']:.4f} | {vals['dino_i']:.3f} | {vals['clip_t']:.3f} | {vals['clip_t_front6']:.4f} | {vals['dino_i_ref16']:.4f} |")
+    return rows + ["", "값 = 시나리오별 회차 평균의 14건 평균(회차 수는 표의 '회차(합)', 채점된 회차만). 기준 = 원본 v0, 마스크 ∪ halo 2 밖. "
+                       "인페인팅 = 동결 조건 이미지(A5000 bf16, 00s2). 전체 표면 형상 지표(보이는 표면 변형은 하지 않았다)."]
+
+
+def x4_table():
+    J = j(RUNS / "paper" / "x4" / "score" / "x4_score.json")
+    assets = list(J)
+    rows = ["| 경로 | 회차 | CD ↓ | F1 ↑ | PSNR(M) ↑ | LPIPS(M) ↓ | R_keep IoU(원본 SLat 대비) ↑ |", "|---|---|---|---|---|---|---|"]
+    for p, tag in (("p0", "own=common"), ("p1", "own"), ("p1", "common")):
+        for k in range(1, 6):
+            rs = [J[a].get(f"{p}_r{k}_{tag}") for a in assets]
+            rs = [r for r in rs if r]
+            if not rs:
+                continue
+            iou = _mean([(r.get("occupancy_vs_origin") or {}).get("rkeep_iou") for r in rs])
+            lab = {"own=common": "P0", "own": "P1(자기 출발점 대비)", "common": "P1(공통 기준 대비)"}[tag]
+            if tag == "own" and _mean([_m(r, "psnr") for r in rs]) > 60:      # 같은 SLat 재디코딩(디코더 1e-7 차이만)
+                rows.append(f"| {lab} | {k} | ≈0 | 1.000 | > 60(같은 메시) | ≈0 | " + ("–" if iou is None else f"{iou:.4f}") + " |")
+                continue
+            rows.append(f"| {lab} | {k} | {_mean([_m(r, 'cd') for r in rs]):.4f} | {_mean([_m(r, 'f1') for r in rs]):.3f} | "
+                        f"{_mean([_m(r, 'psnr') for r in rs]):.2f} | {_mean([_m(r, 'lpips') for r in rs]):.4f} | "
+                        + ("–" if iou is None else f"{iou:.4f}") + " |")
+    return rows + ["", f"채점된 자산 {len(assets)}/11({', '.join(assets)})의 평균 — 나머지 5자산은 채점하지 않고 마무리(사용자 지시). "
+                       "기준 = 자기 출발점(P0 = 생성·원본 GLB = 공통 기준, P1 = 원본 SLat 의 R4 `.cbin`) 또는 공통 기준(원본 GLB), 편집 없음, 전체 영역. "
+                       "P1 은 같은 SLat 을 다시 디코딩할 뿐이라 자기 출발점과 같은 메시이고(∞), 공통 기준 대비 값은 회차와 무관하게 R4 메시 표현 차이만 남는다. "
+                       "P1 공통 기준 행의 PSNR(M) 차이는 R4 정점색 메시 대 텍스처 GLB 렌더 차이(전체 표면 형상 지표 — 가려진 내부 면 포함)."]
+
+
+def x2a_table():
+    from tools.paper.x0 import scenarios
+    p0 = j(RUNS / "paper" / "x2a" / "score" / "x2a_p0.json")
+    runs, st = _x0_runs(), j(RUNS / "paper" / "x0" / "x0_runs_st.json")
+    rows = ["| 시나리오 | P0 회차 | P0 PSNR(M) | P1-glb PSNR(M) | P1-cbin(봉합) PSNR(M) | P0 CD | P1-glb CD | P1-cbin CD | "
+            "P0 DINO-I | P1-glb DINO-I | P0 CLIP-T | P1-glb CLIP-T |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    agg = {k: [] for k in ("p0p", "gp", "cp", "p0c", "gc", "cc", "p0d", "gd", "p0t", "gt")}
+    for sid in scenarios():
+        a = [p0[f"{sid}/{r}"] for r in ("r1", "r2") if f"{sid}/{r}" in p0]
+        if not a:
+            continue
+        g = [runs[sid][r]["c15-glb"] for r in ("r1", "r2", "r3") if sid in runs and r in runs[sid] and "c15-glb" in runs[sid][r]]
+        c = [st[sid][r]["c15-cbin-st"] for r in ("r1", "r2", "r3") if sid in st and r in st[sid] and "c15-cbin-st" in st[sid][r]]
+        v = {"p0p": _mean([_m(x, "psnr") for x in a]), "gp": _mean([_m(x, "psnr") for x in g]), "cp": _mean([_m(x, "psnr") for x in c]),
+             "p0c": _mean([_m(x, "cd") for x in a]), "gc": _mean([_m(x, "cd") for x in g]), "cc": _mean([_m(x, "cd") for x in c]),
+             "p0d": _mean([_m(x, "dino_i") for x in a]), "gd": _mean([_m(x, "dino_i") for x in g]),
+             "p0t": _mean([_m(x, "clip_t") for x in a]), "gt": _mean([_m(x, "clip_t") for x in g])}
+        for k in agg:
+            agg[k].append(v[k])
+        f = lambda x, n: "–" if x is None else format(x, n)   # noqa: E731
+        rows.append(f"| {sid} | {len(a)} | {f(v['p0p'], '.2f')} | {f(v['gp'], '.2f')} | {f(v['cp'], '.2f')} | {f(v['p0c'], '.4f')} | "
+                    f"{f(v['gc'], '.4f')} | {f(v['cc'], '.4f')} | {f(v['p0d'], '.3f')} | {f(v['gd'], '.3f')} | {f(v['p0t'], '.3f')} | {f(v['gt'], '.3f')} |")
+    n = len(agg["p0p"])
+    m = {k: _mean(v) for k, v in agg.items()}
+    f = lambda x, n_: "–" if x is None else format(x, n_)   # noqa: E731
+    rows.append(f"| **평균({n}건)** | | {f(m['p0p'], '.2f')} | {f(m['gp'], '.2f')} | {f(m['cp'], '.2f')} | {f(m['p0c'], '.4f')} | "
+                f"{f(m['gc'], '.4f')} | {f(m['cc'], '.4f')} | {f(m['p0d'], '.3f')} | {f(m['gd'], '.3f')} | {f(m['p0t'], '.3f')} | {f(m['gt'], '.3f')} |")
+    return rows + ["", f"P0 = 원저자 경로(재등록 + 25 스텝 + `to_glb`), 채점된 시나리오 {n}/14 · 시나리오당 r1·r2 중 채점된 회차 평균. "
+                       "P1 = E2a c15(W34 재사용 + 15/15) r1–r3 중 채점된 회차 평균 — P1-glb(`to_glb`)·P1-cbin(R4 + 봉합). 조건 이미지 = 동결본(A5000 bf16). "
+                       "기준 = 원본 v0, 마스크 ∪ halo 2 밖. **비열등성 검정은 하지 않고 마무리(사용자 지시)** — 표는 평균만."]
+
+
+def x2b_table():
+    J = j(RUNS / "paper" / "x2b" / "score" / "x2b.json")
+    items = json.loads((ROOT / "scenarios" / "x2b_list.json").read_text())["scenarios"]
+    rows = ["| 건 | 모델 · 프롬프트 | 경로 | CD ↓ | F1 ↑ | PSNR(M) ↑ | SSIM(M) ↑ | LPIPS(M) ↓ | DINO-I ↑ | CLIP-T ↑ |", "|---|---|---|---|---|---|---|---|---|---|"]
+    for s in items:
+        for p in ("p0", "p1"):
+            r = J.get(f"{s['id']}/{p}")
+            if not r:
+                rows.append(f"| {s['id']} | {s['object'][:24]} · {s['prompt']} | {p.upper()} | 채점 중 | | | | | | |")
+                continue
+            rows.append(f"| {s['id']} | {s['object'][:24]} · {s['prompt']} | {p.upper()} | {_m(r, 'cd'):.4f} | {_m(r, 'f1'):.3f} | "
+                        f"{_m(r, 'psnr'):.2f} | {_m(r, 'ssim'):.4f} | {_m(r, 'lpips'):.4f} | {_m(r, 'dino_i'):.3f} | {_m(r, 'clip_t'):.3f} |")
+    return rows + ["", "P0 = 원저자 경로 1회, P1 = 원 VoxHammer 인코딩 1회로 만든 SLat → editcore 15/15 + R4 + 봉합 1회. "
+                       "조건 이미지 = 데이터셋 2D(X2B-1·3, 편집 시점 마스크 IoU 1.000) / 포크 렌더 + A5000 bf16 FLUX(X2B-2, 데이터셋 2D IoU 0.859). "
+                       "기준 = 데이터셋 원본 GLB, 마스크 ∪ halo 2 밖. FID·FVD·검정 없음."]
+
+
 def md():
     L = ["## 결과 요약 (논문용 표)", "",
-         "채점이 끝난 실험부터 채운다. 모든 수치는 실측이고, 원자료·정의는 아래 각 절에 있다. 생성 `tools/paper/summary.py`.", "",
+         "모든 수치는 실측이고, 원자료·정의는 아래 각 절에 있다. 생성 `tools/paper/summary.py`. **사용자 지시(10-27 01:4x)로 추가 계산(보이는 표면·고정 영역·X2-A 검정) 없이 그 시점까지 채점된 결과로 마무리했다** — 각 표에 채점된 건수·회차를 적는다.", "",
          "### S1. X3 연속 5회 편집 (P1·P2 = 봉합본)", ""]
     L += x3_tables()
     L += ["### S2. C4 색 표류 (보존 영역 표면 색, A_origin 대비)", ""]
@@ -116,14 +231,15 @@ def md():
     L += ["", "한계:", "1. 평가자 1명, 반복 없음 — 통계 검정은 쓰지 않는다.",
           "2. 경로 이름은 가렸지만 P0·P2 는 회차가 지날수록 어두워져(C4) 그림만으로 P1 과 구별될 수 있다 — 블라인드가 완전하지 않을 수 있다.",
           "3. 편집 반영 판단은 사람 선택 하나로 정하지 않고 S1 의 CLIP-T·DINO-I 와 함께 본다.", "",
-          "### S4. X0 기존 14건 재채점(25 vs 15, P1-glb·P1-cbin) — 채점 중", "",
-          "r1–r3 채점·봉합본 재채점이 끝나면 3회 평균 ± 범위로 채운다(r1 단발 결과는 3절).", "",
-          "### S5. X4 무편집 재등록 체인 — 채점 중", "",
-          "11자산 중 5개 채점, 나머지는 X2-B 뒤 재개.", "",
-          "### S6. X2-A 3D 만 비교(14건, P0 2회 · P1 3회, 단측 비열등성) — 채점 중", "",
-          "P0 실행 r2 진행 중. 판정 = 시나리오 평균 쌍 차이, H0: P1 − P0 ≤ −E19 한계(좋은 방향 기준), n = 14, α = 0.05, 우위 p 함께(chief 보정 7).", "",
-          "### S7. X2-B Edit3D-Bench 3건(P0·P1 각 1회) — 실행·채점 전", "",
-          "건별 지표만(FID·FVD·검정 없음).", ""]
+          "### S4. X0 기존 14건 재채점(25 vs 15, P1-glb·P1-cbin)", ""]
+    L += x0_table()
+    L += ["", "### S5. X4 무편집 재등록 체인(P0 vs P1, 5회)", ""]
+    L += x4_table()
+    L += ["", "### S6. X2-A 3D 만 비교(동결 14건, P0 vs P1)", ""]
+    L += x2a_table()
+    L += ["", "### S7. X2-B Edit3D-Bench 3건(P0·P1 각 1회)", ""]
+    L += x2b_table()
+    L += [""]
     return "\n".join(L)
 
 
