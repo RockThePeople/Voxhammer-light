@@ -35,6 +35,33 @@ from urllib.parse import parse_qs, urlparse
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 
+# 선택 플러그인(논문 실험 페이지 등): VHL_VIEWER_PLUGINS=<모듈.py>:<모듈.py>… 각 모듈의 handle(h, path, q) /
+# handle_post(h, path, q) 가 True 를 돌리면 처리 끝. 파일이 바뀌면 다음 요청에서 다시 읽는다(서버 재기동 불요). 없는 파일은 건너뛴다.
+_PLUGINS: dict = {}
+
+
+def plugins():
+    import importlib.util
+    out = []
+    for f in filter(None, os.environ.get("VHL_VIEWER_PLUGINS", "").split(":")):
+        try:
+            mt = os.stat(f).st_mtime
+        except OSError:
+            continue
+        cur = _PLUGINS.get(f)
+        if cur is None or cur[0] != mt:
+            try:
+                spec = importlib.util.spec_from_file_location(f"viewer_plugin_{len(_PLUGINS)}_{int(mt)}", f)
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                cur = _PLUGINS[f] = (mt, mod)
+            except Exception as e:  # noqa: BLE001 — 플러그인 오류가 뷰어를 죽이지 않게
+                sys.stderr.write(f"plugin {f}: {type(e).__name__}: {e}\n")
+                if cur is None:
+                    continue
+        out.append(cur[1])
+    return out
+
 MODEL_EXT = {".glb", ".gltf"}
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
 TEXT_EXT = {".json", ".txt", ".md", ".log", ".csv"}
@@ -293,12 +320,24 @@ class Handler(BaseHTTPRequestHandler):
                     return self._file(p)
             c = self.catalog.cache_dir / f"{it['thumb_key']}.png"
             return self._file(c) if c.is_file() else self._send(404, b"no thumb", "text/plain")
+        for m in plugins():
+            try:
+                if hasattr(m, "handle") and m.handle(self, path, q):
+                    return None
+            except Exception as e:  # noqa: BLE001 — 플러그인 오류는 500 으로
+                return self._send(500, f"plugin error: {type(e).__name__}: {e}".encode(), "text/plain; charset=utf-8")
         return self._send(404, b"not found", "text/plain")
 
     def do_POST(self):
         u = urlparse(self.path)
         q = parse_qs(u.query)
         if u.path != "/api/thumb":
+            for m in plugins():
+                try:
+                    if hasattr(m, "handle_post") and m.handle_post(self, u.path, q):
+                        return None
+                except Exception as e:  # noqa: BLE001
+                    return self._send(500, f"plugin error: {type(e).__name__}: {e}".encode(), "text/plain; charset=utf-8")
             return self._send(404, b"not found", "text/plain")
         it = self.catalog.get(q.get("id", [""])[0])
         n = int(self.headers.get("Content-Length", "0") or 0)

@@ -189,6 +189,7 @@ if (new URLSearchParams(location.search).get('tab') === 'scenarios') {
   loadScenarios();
 } else {
   document.getElementById('tabItems').classList.add('on');
+  q.value = new URLSearchParams(location.search).get('q') || '';   // /?q=x3/ — 검색어를 미리 채운 목록 주소
   load(false);
 }
 </script>
