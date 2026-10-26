@@ -10,17 +10,8 @@
 2. GPU: `nvidia-smi`
 3. 진행 페이지: `http://117.16.244.35:8083/paper` (X0·X4·X3 진행, X3 회차 격자, 로그 끝부분)
 4. 결과 폴더: `$RUNS_DIR/paper/x3/<자산>/<p0|p1|p2>/r<k>/round.json` 이 있으면 그 회차는 끝난 것이다.
-5. **일시정지된 채점 프로세스(상태 T):** X0·X4 채점(PGID 4039842 = `x4_score.py`, 4064024 = `x0_r23.sh` → `x0.py`)은 X2-A 동안 SIGSTOP(21:47). `post_chain.sh` 가 X2-B 가 끝나면 SIGCONT 한다. 기록 `$RUNS_DIR/paper/paused.json`, `/paper` 상단. T 인 것은 죽은 것이 아니다 — 다시 띄우지 않는다.
-6. **백그라운드 체인(2026-10-26 23:3x 기준, 모두 `~/vhl-runs/paper/`):**
-   - `x2a_chain.sh` → `tools/paper/x2a.py`(X2-A P0, **r1·r2 만** — 사용자 23:18). `x2a_stop_r2.sh` 가 r2 14건 뒤 멈추고 `x2a.log` 에 `X2A_P0_DONE`.
-   - `x2b_chain.sh`(X2-A 뒤 X2-B 3건: encode → cond → parent → p0 → p1, 로그 `x2b.log`, 끝 `X2B_DONE`). **X2-C 는 취소(사용자 23:26) — 걸지 않았다.**
-   - `post_chain.sh`(X2-B 뒤: X0·X4 SIGCONT → `x2_score.py a`·`b` → X0·봉합 재채점 끝나면 `tost`, 끝 `POST_DONE`).
-   - `rescore_stitched.sh`(봉합본 재채점 X3 P1·P2 → X0 c15-cbin-st, 끝 `RESCORE_ST_DONE`).
-   - 죽은 체인은 같은 스크립트를 다시 띄우면 된다(모두 끝난 결과 JSON·round.json 을 건너뛴다).
-
-- **X3 실행기(`tools/paper/x3.py`)가 살아 있으면 건드리지 않는다.** 죽어 있으면 같은 명령으로 다시 띄운다. 실행기는 `round.json` 이 있는 회차를 건너뛰고, 끝나지 않은 회차 폴더는 지우고 그 회차부터 다시 한다(코드확인, x3.py 170–182, 284–292). 마지막으로 띄운 명령은 셸 기록이나 로그 머리에서 찾는다.
-- **X0 r2·r3 채점·X4 채점**도 같은 방식으로 살아 있는지 보고, 죽었으면 다시 띄운다(`X0_RUNS`, `tools/paper/x0.py`·`x0_cbin.py`·`x4_score.py`). 이미 쓴 결과 JSON 은 그대로 둔다.
-- **GPU 는 이 세션 하나만 쓴다.** 다른 a5000 세션이 다시 생기면 GPU 를 쓰지 않게 한다.
+5. **실행 중 작업 없음(2026-10-27 03:4x).** GPU 실험(X3·X2-A P0 r1·r2·X2-B)과 예정 채점(X0 r1–r3 126, X4 11자산, X2-A P0 28 + 단측 비열등성, X2-B 6, X3 봉합본)이 모두 끝났다. X0·X4 채점의 일시정지는 X2-B 뒤 해제됐고 프로세스는 정상 종료했다. 보이는 표면·고정 영역 계산은 사용자 지시(01:4x)로 취소, X2-C 는 취소(23:26).
+6. 결과: 브랜치 `item/X-paper-a5000`, 보고서 `docs/reports/X-paper-a5000.md` 맨 앞 "결과 요약" 절(S1–S7, 생성 `tools/paper/summary.py`). 원자료 `$RUNS_DIR/paper/`.
 
 ## 1. 지금 위치 (15:39 보고 기준)
 
