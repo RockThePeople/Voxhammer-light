@@ -24,7 +24,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "third_party" / "ai-ar-v3"), str(ROOT / "third_party" / "ai-ar-v3" / "contract" / "python")]
-from tools.paper.x3 import ASSET_NAMES, MASKS, OUT, ROUNDS, gen, round_info, transform_glb  # noqa: E402
+from tools.paper.x3 import ASSET_NAMES, MASKS, OUT, ROUNDS, gen, round_info, start_r0, transform_glb  # noqa: E402
 
 SC = OUT / "score"
 CACHE = OUT / "_cache"
@@ -109,6 +109,8 @@ def main(names):
         g, nz = gen(a)
         fr_asset = {"v0_mesh": str(g / "model.glb"), "raw_c": nz["center_glb_frame"], "raw_s": nz["scale"], "v0_slat": str(g / "slat.safetensors")}
         origin = slat_cells("p1", a, 0)
+        for pth in ("p1", "p2"):                      # 출발점 GLB(CPU, glbbuild) — X3 실행이 아직 안 만들었어도 채점 가능하게
+            start_r0(a, OUT / pth / a)
         jobs = [("p1", 0, "common", [])]
         for k in range(1, ROUNDS + 1):
             for path in ("p0", "p1", "p2"):
