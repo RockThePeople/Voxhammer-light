@@ -278,3 +278,26 @@ def test_seam_stitch_reduces_open_edges_and_keeps_inherited_bytes(tmp_path, monk
     for k, e in man.items():
         b = (tmp_path / "b" / "chunks" / f"{k}.cbin").read_bytes()
         assert e["hash"] == dc.blob_hash(b) and e["index_count"] == dc.decode(b).index_count
+
+
+def test_seam_skirt_adds_walls_on_fresh_only_and_default_off(tmp_path, monkeypatch):
+    """치마 벽(chief 22:2x 2-1 시험, VHL_R4_SKIRT): 토글 기본 꺼짐, 새 청크에만 벽(삼각형 2개/모서리), 승계 바이트 그대로."""
+    import deltacontract as dc
+    from editcore.export import mesh_to_chunks, skirt_enabled, write_cbin
+    monkeypatch.delenv("VHL_R4_SKIRT", raising=False)
+    assert not skirt_enabled()
+    v, f, attrs = _grid_mesh(n=240)
+    pb, _, _ = mesh_to_chunks(_Pipe(v, f, attrs), _slat([[1, 1, 1]]))
+    (tmp_path / "p" / "chunks").mkdir(parents=True)
+    for k, b in pb.items():
+        (tmp_path / "p" / "chunks" / f"{k}.cbin").write_bytes(b)
+    v2, f2, a2 = _grid_mesh(n=223)
+    cb, cc, _ = mesh_to_chunks(_Pipe(v2, f2, a2), _slat([[1, 1, 1]]))
+    keys = sorted(cb)
+    on = write_cbin(tmp_path / "b", cb, cc, book=set(keys[: len(keys) // 2]), parent_dir=tmp_path / "p", skirt=True)
+    k = on["seam"]["skirt"]
+    assert k["skirt_edges"] > 0 and k["skirt_faces"] == 2 * k["skirt_edges"]
+    for key in on["reused"]:
+        assert (tmp_path / "b" / "chunks" / f"{key}.cbin").read_bytes() == pb[key]
+    for key in on["sent"]:
+        dc.decode((tmp_path / "b" / "chunks" / f"{key}.cbin").read_bytes())   # 계약 디코더로 읽힌다

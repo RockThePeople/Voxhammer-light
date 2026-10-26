@@ -371,7 +371,92 @@ def stitch_seams(meshes, fresh, max_edge=STITCH_MAX_EDGE, inherited_only=True):
                      "chunks_changed": len(changed), "max_edge_cells": max_edge / MESH_CELL}
 
 
-def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="vhl", version=1, hooks=None, snap=True, stitch=None):
+# ── 청크 경계 치마 벽 (chief 22:2x 2-1 시험, 토글 VHL_R4_SKIRT, 기본 꺼짐 — 결과가 바뀐다) ───────────────────────
+# 새 청크가 승계 청크와 맞닿는 청크 경계면 근처의 열린 경계 모서리(용접 1/2000 셀 뒤 면 하나에만 속한 모서리)마다, 두 정점을
+# 정점 법선 반대쪽(표면 안쪽)으로 SKIRT_DEPTH 옮긴 두 정점을 만들고 사각형(삼각형 2개)을 새 청크에 더한다. 틈 사이로 보이는
+# 안쪽(배경·내부)을 벽이 가린다. 색 = 원래 두 정점 색, 법선 = 원래 법선. 승계 청크 바이트는 그대로(R11).
+SKIRT_DEPTH = 1.5 * MESH_CELL
+SKIRT_PLANE_BAND = MESH_CELL      # 경계면에서 이 거리 안의 모서리(청크는 삼각형 무게중심으로 나뉘어 경계가 평면에 딱 붙지 않는다)
+
+
+def skirt_enabled():
+    import os
+    return os.environ.get("VHL_R4_SKIRT", "0") == "1"
+
+
+def skirt_seams(meshes, fresh, depth=SKIRT_DEPTH, band=SKIRT_PLANE_BAND):
+    """meshes: 최종 청크 {키: ChunkMesh}, fresh: 새 청크 키. 반환 (바뀐 새 청크 {키: ChunkMesh}, 통계)."""
+    from collections import defaultdict
+    from deltacontract.chunkbin import canonicalize
+    from deltacontract.coords import parse_chunk_key
+    fresh = set(fresh)
+    keyc = {k: np.asarray(parse_chunk_key(k)) for k in meshes}
+    inh = {tuple(c) for k, c in keyc.items() if k not in fresh}
+    V, E, Eown, src = assembled_open_edges(meshes)
+    add = defaultdict(list)
+    n_edge = 0
+    for (a, b), k in zip(E, Eown):
+        if k not in fresh:
+            continue
+        lo, hi = _chunk_box(k)
+        mid = (V[a] + V[b]) / 2
+        ok = False
+        for ax in range(3):
+            for side, plane in ((-1, lo[ax]), (1, hi[ax])):
+                if abs(mid[ax] - plane) <= band:
+                    nb = keyc[k].copy()
+                    nb[ax] += side
+                    ok |= tuple(nb) in inh
+        if ok:
+            add[k].append((a, b))
+            n_edge += 1
+    changed, n_face, area, total = {}, 0, 0.0, 0.0
+    for m in meshes.values():
+        pp = np.asarray(m.positions, np.float64)
+        f = pp[np.asarray(m.indices).reshape(-1, 3)]
+        total += float(0.5 * np.linalg.norm(np.cross(f[:, 1] - f[:, 0], f[:, 2] - f[:, 0]), axis=1).sum())
+    for k, edges in add.items():
+        m = meshes[k]
+        pos = [np.asarray(m.positions, np.float32)]
+        nrm = [np.asarray(m.normals, np.float32)] if m.normals is not None else None
+        col = [np.asarray(m.colors, np.uint8)] if m.colors is not None else None
+        uvs = [np.asarray(m.uvs, np.float32)] if m.uvs is not None else None
+        idx = [np.asarray(m.indices, np.uint32)]
+        base = len(pos[0])
+        for a, b in edges:
+            vs = []
+            for w in (a, b):
+                sk, si = src[w]
+                sm = meshes[sk]
+                p0 = np.asarray(sm.positions, np.float64)[si]
+                n0 = np.asarray(sm.normals, np.float64)[si] if sm.normals is not None else np.zeros(3)
+                nn = n0 / max(np.linalg.norm(n0), 1e-12)
+                c0 = np.asarray(sm.colors, np.uint8)[si] if sm.colors is not None else np.full(4, 255, np.uint8)
+                vs.append((p0, p0 - depth * nn, n0, c0))
+            (pa, qa, na, ca), (pb, qb, nb_, cb) = vs
+            P4 = np.stack([pa, pb, qb, qa])
+            pos.append(P4.astype(np.float32))
+            if nrm is not None:
+                nrm.append(np.stack([na, nb_, nb_, na]).astype(np.float32))
+            if col is not None:
+                col.append(np.stack([ca, cb, cb, ca]))
+            if uvs is not None:
+                uvs.append(np.zeros((4, 2), np.float32))
+            q = [base, base + 1, base + 2, base + 3]                  # 벽은 양면으로 그려진다(Cycles·뷰어 DoubleSide)
+            idx.append(np.asarray([q[0], q[1], q[2], q[0], q[2], q[3]], np.uint32))
+            area += float(np.linalg.norm(np.cross(P4[1] - P4[0], P4[2] - P4[0])) / 2 + np.linalg.norm(np.cross(P4[2] - P4[0], P4[3] - P4[0])) / 2)
+            n_face += 2
+            base += 4
+        changed[k] = canonicalize(chunk_coord=parse_chunk_key(k), positions=np.concatenate(pos), indices=np.concatenate(idx),
+                                  normals=np.concatenate(nrm) if nrm is not None else None,
+                                  colors=np.concatenate(col) if col is not None else None,
+                                  uvs=np.concatenate(uvs) if uvs is not None else None, voxel_count=m.voxel_count)
+    return changed, {"skirt_edges": n_edge, "skirt_faces": n_face, "skirt_area_ratio": area / total if total else 0.0,
+                     "chunks_changed": len(changed), "depth_cells": depth / MESH_CELL, "band_cells": band / MESH_CELL}
+
+
+def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="vhl", version=1, hooks=None, snap=True, stitch=None,
+               skirt=None):
     """R4 쓰기부: 변경 집합(book 인자 = 부기 ∪ 점유 변경) 밖 청크는 부모 바이트를 그대로 복사(R11 승계), 안·부모에 없는 청크는 새 바이트.
     부모에만 있고 새 디코딩에 없는 부기 밖 청크도 부모 바이트로 남긴다(부기 밖은 바뀌지 않는다).
     부기 안에서 기하가 사라진 부모 청크는 removed 로 적는다(계약 3.4.3)."""
@@ -425,6 +510,15 @@ def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="
             meshes.update(stitched)
             sst["open_edges_after"] = int(len(assembled_open_edges(meshes)[1]))
             seam = {**(seam or {}), "stitch": sst}
+    if (skirt_enabled() if skirt is None else skirt) and pdir is not None and sent and reused:
+        with span("seam_skirt", 7) if span else _null():
+            meshes = {k: (chunks[k] if src == "fresh" else dc.decode(b)) for k, (src, b) in final.items()}
+            skirted, kst = skirt_seams(meshes, sent)
+            chunks = dict(chunks)
+            for k, cm in skirted.items():
+                chunks[k] = cm
+                final[k] = ("fresh", dc.encode(cm))
+            seam = {**(seam or {}), "skirt": kst}
     with span("cbin_write", 7) if span else _null():
         entries = {}
         for k, (src, b) in final.items():

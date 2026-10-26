@@ -28,10 +28,11 @@ def chunk_files(d):
     return {p.stem.split(".")[0]: p for p in sorted(d.glob("*.cbin"))}
 
 
-def stitch_round(orig_cbin, prev_chunks, out):
-    """orig_cbin: 원래 회차 cbin 폴더(r4.json, chunks/), prev_chunks: 직전 회차(봉합본) 청크 폴더."""
+def stitch_round(orig_cbin, prev_chunks, out, stitch=True, skirt=False):
+    """orig_cbin: 원래 회차 cbin 폴더(r4.json, chunks/), prev_chunks: 직전 회차(봉합본) 청크 폴더.
+    stitch: 봉합 띠, skirt: 치마 벽(chief 22:2x 시험). 둘 다 새 청크에만 더한다."""
     import deltacontract as dc
-    from editcore.export import assembled_open_edges, stitch_seams
+    from editcore.export import assembled_open_edges, skirt_seams, stitch_seams
     from editcore.render import vertex_color_render_glb
     from server.glbbuild import build_glb
     out = Path(out)
@@ -45,10 +46,19 @@ def stitch_round(orig_cbin, prev_chunks, out):
         final[k] = (prev[k] if k in prev else orig[k]).read_bytes()
     meshes = {k: dc.decode(b) for k, b in final.items()}
     before = int(len(assembled_open_edges(meshes)[1]))
-    changed, st = stitch_seams(meshes, sent)
-    for k, cm in changed.items():
-        final[k] = dc.encode(cm)
-        meshes[k] = cm
+    st = {"open_edges_before": before, "strip_faces": 0, "strip_area_ratio": 0.0}
+    if stitch:
+        changed, st = stitch_seams(meshes, sent)
+        for k, cm in changed.items():
+            final[k] = dc.encode(cm)
+            meshes[k] = cm
+    if skirt:
+        changed, kst = skirt_seams(meshes, sent)
+        for k, cm in changed.items():
+            final[k] = dc.encode(cm)
+            meshes[k] = cm
+        st["skirt"] = kst
+    st.update(stitch=stitch, skirt_on=skirt)
     st["open_edges_after"] = int(len(assembled_open_edges(meshes)[1]))
     st["open_edges_before_check"] = before
     (out / "cbin" / "chunks").mkdir(parents=True, exist_ok=True)
@@ -77,6 +87,21 @@ def x3(path, asset):
         prev = o / "cbin" / "chunks"
 
 
+def x3_variant(variant, path, asset, rounds=5):
+    """chief 22:2x 2-1: 조합별 체인(회차 순서, 직전 회차 같은 조합본 승계). variant = skirt | both."""
+    from tools.paper.x3 import OUT, gen
+    flags = {"skirt": (False, True), "both": (True, True), "stitch": (True, False)}[variant]
+    g, _ = gen(asset)
+    prev = g / "chunks"
+    for k in range(1, rounds + 1):
+        o = OUT / "seamvar" / variant / path / asset / f"r{k}"
+        if not (o / "stitch.json").exists():
+            st = stitch_round(OUT / path / asset / f"r{k}" / "cbin", prev, o, *flags)
+            print(f"seamvar {variant} {path} {asset} r{k} open {st['open_edges_before']} → {st['open_edges_after']} "
+                  f"strip {st['strip_faces']} skirt {st.get('skirt', {}).get('skirt_faces', 0)} inh_same {st['inherited_bytes_unchanged']}", flush=True)
+        prev = o / "cbin" / "chunks"
+
+
 def x0(sid, runs=("r1", "r2", "r3")):
     from r4_checks import scenarios
     S = {s["id"]: s for s in scenarios()}
@@ -95,5 +120,7 @@ if __name__ == "__main__":
     cmd = sys.argv[1]
     if cmd == "x3":
         x3(sys.argv[2], sys.argv[3])
+    elif cmd == "x3v":
+        x3_variant(sys.argv[2], sys.argv[3], sys.argv[4])
     elif cmd == "x0":
         x0(sys.argv[2], tuple(sys.argv[3:]) or ("r1", "r2", "r3"))
