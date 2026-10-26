@@ -10,7 +10,13 @@
 2. GPU: `nvidia-smi`
 3. 진행 페이지: `http://117.16.244.35:8083/paper` (X0·X4·X3 진행, X3 회차 격자, 로그 끝부분)
 4. 결과 폴더: `$RUNS_DIR/paper/x3/<자산>/<p0|p1|p2>/r<k>/round.json` 이 있으면 그 회차는 끝난 것이다.
-5. **일시정지된 채점 프로세스(상태 T):** X0·X4 채점은 X3 동안 정지(16:23–21:25) 뒤 재개했다가, chief 21:4x 지시로 **X2-A 동안 다시 SIGSTOP**(2026-10-26 21:47, PGID 4039842 = `x4_score.py`, PGID 4064024 = `x0_r23.sh` → `x0.py`, Blender 렌더 자식 포함). 기록 `$RUNS_DIR/paper/paused.json`(이전 정지 이력 포함), `/paper` 상단 표시. **X2-A 가 끝나면(`$RUNS_DIR/paper/x2a.log` 에 `X2A_P0_DONE`) `kill -CONT -4039842 -4064024` 로 재개한다** — 자동 감시는 없다. `ps -o pid,stat` 에서 T 인 것은 죽은 것이 아니다, 다시 띄우지 않는다.
+5. **일시정지된 채점 프로세스(상태 T):** X0·X4 채점(PGID 4039842 = `x4_score.py`, 4064024 = `x0_r23.sh` → `x0.py`)은 X2-A 동안 SIGSTOP(21:47). `post_chain.sh` 가 X2-B 가 끝나면 SIGCONT 한다. 기록 `$RUNS_DIR/paper/paused.json`, `/paper` 상단. T 인 것은 죽은 것이 아니다 — 다시 띄우지 않는다.
+6. **백그라운드 체인(2026-10-26 23:3x 기준, 모두 `~/vhl-runs/paper/`):**
+   - `x2a_chain.sh` → `tools/paper/x2a.py`(X2-A P0, **r1·r2 만** — 사용자 23:18). `x2a_stop_r2.sh` 가 r2 14건 뒤 멈추고 `x2a.log` 에 `X2A_P0_DONE`.
+   - `x2b_chain.sh`(X2-A 뒤 X2-B 3건: encode → cond → parent → p0 → p1, 로그 `x2b.log`, 끝 `X2B_DONE`). **X2-C 는 취소(사용자 23:26) — 걸지 않았다.**
+   - `post_chain.sh`(X2-B 뒤: X0·X4 SIGCONT → `x2_score.py a`·`b` → X0·봉합 재채점 끝나면 `tost`, 끝 `POST_DONE`).
+   - `rescore_stitched.sh`(봉합본 재채점 X3 P1·P2 → X0 c15-cbin-st, 끝 `RESCORE_ST_DONE`).
+   - 죽은 체인은 같은 스크립트를 다시 띄우면 된다(모두 끝난 결과 JSON·round.json 을 건너뛴다).
 
 - **X3 실행기(`tools/paper/x3.py`)가 살아 있으면 건드리지 않는다.** 죽어 있으면 같은 명령으로 다시 띄운다. 실행기는 `round.json` 이 있는 회차를 건너뛰고, 끝나지 않은 회차 폴더는 지우고 그 회차부터 다시 한다(코드확인, x3.py 170–182, 284–292). 마지막으로 띄운 명령은 셸 기록이나 로그 머리에서 찾는다.
 - **X0 r2·r3 채점·X4 채점**도 같은 방식으로 살아 있는지 보고, 죽었으면 다시 띄운다(`X0_RUNS`, `tools/paper/x0.py`·`x0_cbin.py`·`x4_score.py`). 이미 쓴 결과 JSON 은 그대로 둔다.
