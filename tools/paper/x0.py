@@ -40,42 +40,53 @@ def scenarios():
     return out
 
 
-def configs(sid, s):
-    """설정 → (메시, slat_tgt, 정점색)."""
-    base, c15 = RUNS / "01-port" / s["name"] / "port-r1", RUNS / E2A_DAY / s["name"] / "e2a-c15" / "r1"
+def configs(sid, s, run="r1"):
+    """설정 → (메시, slat_tgt, 정점색). run = r1·r2·r3(지시서 14건 × 3회, chief 15:2x 1)."""
+    base, c15 = RUNS / "01-port" / s["name"] / f"port-{run}", RUNS / E2A_DAY / s["name"] / "e2a-c15" / run
+    cb = OUT / "cbin" / sid if run == "r1" else OUT / "cbin" / sid / run
     return {"base": (base / "output.glb", base / "slat_tgt.safetensors", False),
             "c15-glb": (c15 / "output.glb", c15 / "slat_tgt.safetensors", False),
-            "c15-cbin": (OUT / "cbin" / sid / "output.glb", c15 / "slat_tgt.safetensors", True)}
+            "c15-cbin": (cb / "output.glb", c15 / "slat_tgt.safetensors", True)}
 
 
 def main(ids):
     from tools.paper_metrics import score
     S = scenarios()
     summary = json.loads((OUT / "x0.json").read_text()) if (OUT / "x0.json").is_file() else {}
-    for sid in ids or list(S):
+    runs_sum = json.loads((OUT / "x0_runs.json").read_text()) if (OUT / "x0_runs.json").is_file() else {}
+    for sid, run in [(i, r) for i in (ids or list(S)) for r in os.environ.get("X0_RUNS", "r1").split(",")]:
         s = S[sid]
         cells = json.loads(Path(s["mask"]).read_text())["mask"]["voxels"]
-        for cfg, (glb, slat, vc) in configs(sid, s).items():
-            o = OUT / sid / f"{cfg}.json"
+        for cfg, (glb, slat, vc) in configs(sid, s, run).items():
+            o = OUT / sid / f"{cfg}.json" if run == "r1" else OUT / sid / run / f"{cfg}.json"
             if o.is_file():
-                summary.setdefault(sid, {})[cfg] = json.loads(o.read_text())
+                r = json.loads(o.read_text())
+                if run == "r1":
+                    summary.setdefault(sid, {})[cfg] = r
+                runs_sum.setdefault(sid, {}).setdefault(run, {})[cfg] = r
+                continue
+            if not Path(glb).is_file():
+                print(f"x0 {sid} {run} {cfg} 메시 없음 — 건너뜀 ({glb})", flush=True)
                 continue
             job = {"asset": {"v0_mesh": str(s["v0"]), "raw_c": s["raw_c"], "raw_s": s["raw_s"], "v0_slat": str(s["slat"])},
                    "ref": {"mesh": str(s["v0"]), "kind": "v0"},
                    "res": {"mesh": str(glb), "kind": "raw", "vertex_color": vc, "slat": str(slat)},
                    "excl_cells": cells, "rkeep": {"parent_slat": str(s["slat"]), "mask_cells": cells},
                    "edit_view": s["view"], "edit_image": str(s["cond"] / "2d_edit.png"), "prompt": s["prompt"],
-                   "work_dir": str(OUT / sid / cfg), "cache_dir": str(OUT / "_cache")}
+                   "work_dir": str(OUT / sid / cfg) if run == "r1" else str(OUT / sid / run / cfg), "cache_dir": str(OUT / "_cache")}
             r = score(job)
             r["source"] = str(glb)
             o.parent.mkdir(parents=True, exist_ok=True)
             o.write_text(json.dumps(r, indent=1))
-            summary.setdefault(sid, {})[cfg] = r
+            if run == "r1":
+                summary.setdefault(sid, {})[cfg] = r
+            runs_sum.setdefault(sid, {}).setdefault(run, {})[cfg] = r
             p, im = r["preserved"], r["image"]
-            print(f"x0 {sid} {cfg} CD {p['cd']:.4f} NC {p['nc']:.3f} F1 {p['f1']:.3f} PSNR {im['psnr']:.2f} SSIM {im['ssim']:.4f} "
+            print(f"x0 {sid} {run} {cfg} CD {p['cd']:.4f} NC {p['nc']:.3f} F1 {p['f1']:.3f} PSNR {im['psnr']:.2f} SSIM {im['ssim']:.4f} "
                   f"LPIPS {im['lpips']:.4f} DINO {im.get('dino_i'):.4f} CLIP {im.get('clip_t'):.4f} | E2a정의 CLIP6 {im.get('clip_t_front6'):.4f} "
                   f"DINO16 {im.get('dino_i_ref16'):.4f}", flush=True)
             (OUT / "x0.json").write_text(json.dumps(summary, indent=1))
+            (OUT / "x0_runs.json").write_text(json.dumps(runs_sum, indent=1))
 
 
 if __name__ == "__main__":
