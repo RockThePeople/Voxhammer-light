@@ -63,9 +63,9 @@ function card(e) {
     const m = e.means['c15-glb'], b = e.means['base'];
     if (m && b) extra = `<table class="kv"><tr><td>보존 CD</td><td>${b.cd.toFixed(4)} → ${m.cd.toFixed(4)}</td></tr><tr><td>PSNR(M)</td><td>${b.psnr.toFixed(2)} → ${m.psnr.toFixed(2)}</td></tr><tr><td>CLIP-T 6시점</td><td>${b.clip_t_front6.toFixed(4)} → ${m.clip_t_front6.toFixed(4)}</td></tr></table><div class="mut" style="font-size:12px">base(25) → c15 P1-glb, 14건 평균</div>`; }
   if (e.id === 'X4') { done = e.p0 + e.p1; total = 2 * e.total;
-    extra = `<div class="mut" style="font-size:12px">P0 ${e.p0}/${e.total} · P1 ${e.p1}/${e.total}${e.empty_mask_edit ? ' · 빈 마스크 편집: ' + esc(e.empty_mask_edit.empty_mask_edit) : ''} · 채점 ${e.scored.length ? e.scored.length + '개' : '대기'}</div>`; }
+    extra = `<div class="mut" style="font-size:12px">P0 ${e.p0}/${e.total} · P1 ${e.p1}/${e.total}${e.empty_mask_edit ? ' · 빈 마스크 편집: ' + esc(e.empty_mask_edit.empty_mask_edit) : ''} · 채점 ${e.scored.length}/11 자산</div>`; }
   if (e.id === 'X3') { done = e.total_done; total = e.total;
-    extra = `<div class="mut" style="font-size:12px">P0 ${e.done.p0}/15 · P1 ${e.done.p1}/15 · P2 ${e.done.p2}/15 · 남은 시간 약 ${fmt(e.eta_s)}</div>`; }
+    extra = `<div class="mut" style="font-size:12px">P0 ${e.done.p0}/15 · P1 ${e.done.p1}/15 · P2 ${e.done.p2}/15 · 남은 시간 약 ${fmt(e.eta_s)} · 채점 ${e.scored.length}/3 자산</div>`; }
   if (total) state = done >= total ? 'done' : (done > 0 || e.running) ? 'running' : 'pending';
   const lab = {done:'완료', running:'진행 중', pending:'대기'}[state];
   return `<div class="card"><h2>${e.id} <span class="tag ${state}">${lab}</span></h2><div class="mut" style="font-size:12px">${esc(e.title)}</div>

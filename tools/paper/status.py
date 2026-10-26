@@ -110,7 +110,8 @@ def x3():
     running = any(c["state"] == "running" for r in grid.values() for c in r)
     return {"grid": grid, "done": done, "total": 45, "total_done": total_done, "eta_s": eta, "running": running,
             "mean_wall_s": {p: (sum(w) / len(w) if w else None) for p, w in walls.items()},
-            "rereg_sheet": _rel(sheet) if sheet.exists() else None, "log": tail(P / "x3.log")}
+            "rereg_sheet": _rel(sheet) if sheet.exists() else None, "log": tail(P / "x3.log"),
+            "scored": sorted(_j(P / "x3" / "score" / "x3_score.json") or {})}
 
 
 def x4():
@@ -123,7 +124,7 @@ def x4():
         j = _j(P / "x4" / "p1" / a / "r1" / "round.json")
         if j:
             note = j.get("note")
-    scored = sorted(str(p.relative_to(P / "x4")) for p in (P / "x4").glob("score*.json")) if (P / "x4").exists() else []
+    scored = sorted(_j(P / "x4" / "score" / "x4_score.json") or {})   # 다른 세션의 tools/paper/x4_score.py 출력(자산별 키)
     return {"p0": r["p0"], "p1": r["p1"], "total": 55, "chain_done": (P / "x4" / "chain.done").exists(), "empty_mask_edit": note, "scored": scored}
 
 
