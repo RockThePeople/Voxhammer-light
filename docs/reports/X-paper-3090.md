@@ -26,7 +26,8 @@
 - 임시 리스너: `python3 -m http.server 18090 --bind 0.0.0.0`(3090, 2026-10-26 11:18:32 기동, `setsid` 로 상주). 응답 본문 `rtx3090 listener ok <기동 시각>`.
 - 3090 자체 확인: `curl http://127.0.0.1:18090/` → 200.
 - **A5000 에서 할 시험:** `curl -v http://<3090>:18090/`. `<3090>` 은 3090 의 LAN 주소이고 chief 에 따로 전한다(문서에 쓰지 않는다).
-- 결과: (A5000 시험 대기). 접속 기록은 리스너 로그에 남는다.
+- 결과: **접속 성공(실측).** 리스너 로그에 `<A5000> - - [26/Oct/2026 12:51:14] "GET / HTTP/1.1" 200` 이 남았다. A5000 → 3090 방향이 열려 있다.
+- 따라서 X3 INT4 워커를 `0.0.0.0:8082` 로 열었다(3절). 18090 리스너는 chief 지시대로 유지하며, seed 0 자산 파일 전달에도 쓴다(2절).
 - 접속되면 X3 용 INT4 워커를 0.0.0.0 으로 열어 A5000 실험 스크립트가 직접 부르게 한다. 막히면 3090 이 루프를 돈다(A5000 렌더 수신 → 인페인팅 → 2d_edit 업로드).
 
 ## 2. (b) X3 자산 이미지 (실측)
@@ -71,14 +72,36 @@
 - jeep 은 원문 다섯 부위가 한 장에 다 보이는 시드가 없다. 지붕 위 추가(4회차)는 지붕이 있는 시드(0·2·3)가 낫다. 스노클 제거(5회차)는 스노클이 보이는 시드(3)만 효능을 볼 수 있다(`추론`).
 - 3/4 구도는 jeep 0·1, cottage 전부, adventurer 전부가 따랐다. jeep 2·3 은 정면에 가깝다.
 
-**사용자 선택: (대기)** — 자산마다 시드 1개.
+**사용자 결정(2026-10-26 12:37, chief 답 main `8b3f107`):** 무작위로 고르지 않는다. **세 자산 모두 seed 0** 을 쓴다. 편집은 원문 1→5 순서·원문 프롬프트 그대로다.
 
-## 3. (c) X3 인페인팅 — 사용자 선택 뒤
+### A5000 전달 (3D 생성 입력)
 
-- 선택이 끝나면 INT4 워커를 다시 올린다(R9 설정: 1024², 50스텝, guidance 30, seed 0, 마스크 밖 합성 켬). P1·P2 조건 이미지를 이 워커로 만든다(0절 1).
+| 자산 | 파일 | sha256 | 내려받기 (A5000 에서) |
+|---|---|---|---|
+| jeep | `input.png`(배경 제거, TRELLIS 입력) | `979f1418d20e12095b0274b052a8c316d0d5beba4405198872fc741c853bd6a3` | `http://<3090>:18090/x3/jeep/input.png` |
+| jeep | `image_rgb.png` | `89c62c64eec6518681c40ca44e22c40d06317efad7ec45f4e0df4a2fd1c9d83a` | `…/x3/jeep/image_rgb.png` |
+| cottage | `input.png` | `1fb5c801e665dda89aff4df515eebee9286f9815cf326c6ede069a1f8ae345f6` | `…/x3/cottage/input.png` |
+| cottage | `image_rgb.png` | `6402bd081f828e66dfbf2206907efa623d99f8d759b18cf5af5b0ff494797498` | `…/x3/cottage/image_rgb.png` |
+| adventurer | `input.png` | `8d9be0a2f9886b58e1efa51dac91052dee6c54bfeb338ee17c9525f4bc51dbb5` | `…/x3/adventurer/input.png` |
+| adventurer | `image_rgb.png` | `99bb6891135c8195f16b11866ffe23d999de223a4907b73fc0641b26033fc4a7` | `…/x3/adventurer/image_rgb.png` |
+
+- 3090 경로: `runs/paper/x3/assets/<자산>/seed0/` (생성 파라미터 `params.json` 포함).
+- 18090 리스너에 같은 파일과 `x3/SHA256SUMS` 를 올렸다. A5000 이 위 URL 로 받고 sha256 을 대조하면 된다. 3090 에서 받은 파일의 해시가 원본과 같은 것을 확인했다(실측).
+- git 에는 커밋하지 않았다(지시: `runs/` 에 두고 sha256 만).
+
+## 3. (c) X3 인페인팅 — 워커 기동 완료, A5000 호출 대기
+
+- **P0 는 A5000 bf16, 3090 은 P1·P2 만 INT4**(chief 답 2, main `60ebce5` 확인).
+- INT4 워커 재기동(2026-10-26 12:5x, 실측):
+  - `INPAINT_BIND=0.0.0.0 VHL_R9=1 bash services/rtx3090_inpaint/run.sh start`
+  - 로그 `[ready] 0.0.0.0:8082`. 3090 LAN 주소로 `/health` 200 을 받았다.
+  - 원본 `358293d` + INT4 `bd90903`. R9 설정: 1024², 50스텝, guidance 30, seed 는 요청(0), 마스크 밖 합성 켬.
+- A5000 실험 스크립트가 `POST http://<3090>:8082/inpaint?wait=1` (규약 §2, multipart image·mask·prompt·seed)로 직접 부른다. 결과는 `GET /jobs/<id>/2d_edit.png`.
+- 워커 변경: `INPAINT_BIND` 를 추가했다(기본 127.0.0.1 그대로, 열 때만 0.0.0.0).
 - 호출마다 `2d_render`·`2d_mask`·`2d_edit` 와 해시를 `runs/paper/x3/` 에 남긴다.
 
 ## 4. 변경 파일
 
 - `tools/x3_assets.py`: X3 자산 이미지 생성(원문 프롬프트, Z-Image → BiRefNet, sha256 색인·시트)
+- `services/rtx3090_inpaint/worker.py`·`README.md`: `INPAINT_BIND`(기본 127.0.0.1)
 - `docs/reports/X-paper-3090.md`: 이 보고서

@@ -1,7 +1,8 @@
 """R9 상주 인페인팅 워커 (rtx3090). `VHL_R9=1` 일 때만 뜬다.
 
 - 프로세스 1개가 INT4 FLUX.1-Fill-dev 를 한 번 올리고 HTTP 로 요청을 받는다. 호출마다 subprocess 를 띄우지 않는다.
-- localhost 바인딩, 포트 `INPAINT_PORT`(기본 8082). 오케스트레이터만 호출한다(정오표 E4).
+- 바인딩 `INPAINT_BIND`(기본 127.0.0.1 — 오케스트레이터만 호출, 정오표 E4), 포트 `INPAINT_PORT`(기본 8082).
+  X-paper X3 처럼 A5000 실험 스크립트가 직접 부를 때만 `INPAINT_BIND=0.0.0.0` 으로 연다(chief 지시 2026-10-26).
 - 인페인팅은 포크 `utils/inpaint.py:inpaint()` 를 그대로 호출한다(1024², 50스텝, guidance 30,
   max_sequence_length 512, CPU generator, seed 기본 0 = 정오표 E5). A5000 기준 경로(`reference/run_inpaint.py`)와
   다른 것은 파이프라인 구성(INT4 transformer, GPU 상주)뿐이다.
@@ -15,7 +16,7 @@ HTTP (규약 초안: services/common/http-contract.md)
     GET  /jobs/<id>                상태·결과
     GET  /jobs/<id>/<name>.png     2d_render · 2d_mask · 2d_edit · 2d_edit_raw
 
-환경변수: VHL_R9, INPAINT_PORT, RUNS_DIR, REFERENCE_DIR, FLUX_FILL_BASE, FLUX_FILL_TRANSFORMER, HF_HUB_OFFLINE(기본 1)
+환경변수: VHL_R9, INPAINT_BIND, INPAINT_PORT, RUNS_DIR, REFERENCE_DIR, FLUX_FILL_BASE, FLUX_FILL_TRANSFORMER, HF_HUB_OFFLINE(기본 1)
 """
 from __future__ import annotations
 
@@ -58,6 +59,7 @@ from utils.inpaint import inpaint  # noqa: E402  포크 함수 그대로
 BASE = os.environ.get("FLUX_FILL_BASE", "black-forest-labs/FLUX.1-Fill-dev")
 QUANT = os.environ.get("FLUX_FILL_TRANSFORMER", "nunchaku-ai/nunchaku-flux.1-fill-dev")
 PORT = int(os.environ.get("INPAINT_PORT") or 8082)
+BIND = os.environ.get("INPAINT_BIND") or "127.0.0.1"
 RUNS = Path(os.environ.get("RUNS_DIR") or ROOT / "runs") / "r9-inpaint"
 SIZE = 1024
 OUT_NAMES = ("2d_render", "2d_mask", "2d_edit", "2d_edit_raw")
@@ -263,8 +265,8 @@ class H(BaseHTTPRequestHandler):
 def main():
     load()
     threading.Thread(target=loop, daemon=True).start()
-    srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
-    print(f"[ready] 127.0.0.1:{PORT}", flush=True)
+    srv = ThreadingHTTPServer((BIND, PORT), H)
+    print(f"[ready] {BIND}:{PORT}", flush=True)
     srv.serve_forever()
 
 

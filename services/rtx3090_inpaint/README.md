@@ -48,7 +48,8 @@ HF_TOKEN=<토큰> <flux-fill python> -c "from huggingface_hub import snapshot_do
 |---|---|---|---|
 | `VHL_R9` | ✓ | (꺼짐) | `1` 이어야 뜬다 |
 | `RTX3090_PYTHON` | ✓ (`run.sh`) | – | `flux-fill` env 의 python 경로 |
-| `INPAINT_PORT` | – | 8082 | 바인딩 포트. 주소는 항상 `127.0.0.1` |
+| `INPAINT_PORT` | – | 8082 | 바인딩 포트 |
+| `INPAINT_BIND` | – | `127.0.0.1` | 바인딩 주소. A5000 실험 스크립트가 직접 부를 때만 `0.0.0.0`(X-paper X3, chief 지시 2026-10-26) |
 | `RUNS_DIR` | – | `<repo>/runs` | 잡 산출물 `RUNS_DIR/r9-inpaint/<job_id>/`, 로그 `RUNS_DIR/r9-inpaint/worker.log` |
 | `REFERENCE_DIR` | – | `build/reference-v2` | 포크 사본 위치 |
 | `FLUX_FILL_BASE` | – | `black-forest-labs/FLUX.1-Fill-dev` | T5·CLIP·VAE 저장소. 미러로 바꿀 수 있다(정오표 E11) |
