@@ -388,7 +388,7 @@ def startup(preload=True):
 
 def serve(host="0.0.0.0", port=8082, preload=True):
     import uvicorn
-    app.add_event_handler("startup", lambda: startup(preload))
+    app.router.on_startup.append(lambda: startup(preload))
     print(f"[04l] /v2/trellis/*  http://{host}:{port}  data={store.DATA_ROOT} renders={RENDER_ROOT}", flush=True)
     uvicorn.run(app, host=host, port=port, log_level="info")
 
