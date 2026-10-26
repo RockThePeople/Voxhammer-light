@@ -2,8 +2,9 @@
 
 a    : X2-A P0(r1·r2) vs v0, tools/paper_metrics.score(X0 과 같은 정의·마스크·편집 시점). P0 출력은 T(v0) = N 좌표(kind n).
        P1 은 새로 채점하지 않는다 — X0 의 E2a c15 r1–r3(P1-glb = c15-glb, P1-cbin = c15-cbin-st 봉합본, 봉합 전 c15-cbin 참고).
-tost : 시나리오별 회차 평균(P0 2회, P1 3회)의 쌍 차이 d = P1 − P0 에 TOST(n = 14), 동등성 한계 = E19 절대 허용치(±).
-       개선 칸 수도 센다. 결과 $RUNS_DIR/paper/x2a/score/tost.json
+tost : 시나리오별 회차 평균(P0 2회, P1 3회)의 쌍 차이에 **단측 비열등성 검정**(chief 보정 7, 지시서 main f97aee7) — 양측 TOST 가 아니다.
+       좋은 방향으로 맞춘 g = good·(P1 − P0), H0: g ≤ −한계(E19), H1: g > −한계, 단측 t, n = 14, α = 0.05.
+       우위(H1: g > 0) p 값도 함께. 개선 칸 수도 센다. 결과 $RUNS_DIR/paper/x2a/score/tost.json(이름은 그대로)
 b    : X2-B 3건 P0·P1(봉합) vs 데이터셋 원본 GLB.
 
     python tools/paper/x2_score.py a | tost | b
@@ -88,8 +89,8 @@ def tost():
     p0 = json.loads((X2A / "score" / "x2a_p0.json").read_text())
     x0 = json.loads((X0 / "x0_runs.json").read_text())
     x0s = json.loads((X0 / "x0_runs_st.json").read_text()) if (X0 / "x0_runs_st.json").exists() else {}
-    out = {"note": "d = P1 − P0, 시나리오별 회차 평균(P0 r1·r2, P1 E2a c15 r1–r3). TOST: H0 d ≤ −m 또는 d ≥ +m, 둘 다 p < 0.05 면 동등. "
-                   "개선 = 좋은 방향으로 한계를 넘은 시나리오 수.", "n": len(S), "p0_runs": list(P0_RUNS), "p1_runs": ["r1", "r2", "r3"]}
+    out = {"note": "d = P1 − P0, 시나리오별 회차 평균(P0 r1·r2, P1 E2a c15 r1–r3). 단측 비열등성(chief 보정 7): H0 good·d ≤ −m, "
+                   "p < 0.05 면 비열등. 우위 p = H0 good·d ≤ 0. 개선 = 좋은 방향으로 한계를 넘은 시나리오 수.", "n": len(S), "p0_runs": list(P0_RUNS), "p1_runs": ["r1", "r2", "r3"]}
     for p1cfg, src in (("P1-glb", ("c15-glb", x0)), ("P1-cbin(봉합)", ("c15-cbin-st", x0s)), ("P1-cbin(봉합 전, 참고)", ("c15-cbin", x0))):
         cfg, J = src
         rows = {}
@@ -104,15 +105,19 @@ def tost():
             if len(d) < 3:
                 continue
             d = np.asarray(d)
-            lo = stats.ttest_1samp(d, -mg, alternative="greater").pvalue
-            hi = stats.ttest_1samp(d, mg, alternative="less").pvalue
+            g = good * d                                            # 좋은 방향 기준 차이(> 0 이면 P1 이 좋다)
+            p_ni = stats.ttest_1samp(g, -mg, alternative="greater").pvalue   # 비열등: H0 g ≤ −m
+            p_sup = stats.ttest_1samp(g, 0.0, alternative="greater").pvalue  # 우위: H0 g ≤ 0
             ci = stats.t.interval(0.90, len(d) - 1, loc=d.mean(), scale=stats.sem(d))
-            rows[m] = {"n": int(len(d)), "margin": mg, "p0_mean": float(np.mean(a_m)), "p1_mean": float(np.mean(b_m)),
-                       "d_mean": float(d.mean()), "ci90": [float(ci[0]), float(ci[1])], "p_lower": float(lo), "p_upper": float(hi),
-                       "equivalent": bool(max(lo, hi) < 0.05), "p1_better_beyond_margin": int((good * d > mg).sum()),
-                       "p1_worse_beyond_margin": int((good * d < -mg).sum()), "p0_range_mean": float(np.mean(rng0))}
+            rows[m] = {"n": int(len(d)), "margin": mg, "good_direction": "higher" if good > 0 else "lower",
+                       "p0_mean": float(np.mean(a_m)), "p1_mean": float(np.mean(b_m)),
+                       "d_mean": float(d.mean()), "ci90": [float(ci[0]), float(ci[1])],
+                       "p_noninferiority": float(p_ni), "noninferior": bool(p_ni < 0.05),
+                       "p_superiority": float(p_sup), "superior": bool(p_sup < 0.05),
+                       "p1_better_beyond_margin": int((g > mg).sum()), "p1_worse_beyond_margin": int((g < -mg).sum()),
+                       "p0_range_mean": float(np.mean(rng0))}
         out[p1cfg] = rows
-        print(p1cfg, {m: (round(v["d_mean"], 4), v["equivalent"], v["p1_better_beyond_margin"]) for m, v in rows.items()}, flush=True)
+        print(p1cfg, {m: (round(v["d_mean"], 4), v["noninferior"], round(v["p_superiority"], 4)) for m, v in rows.items()}, flush=True)
     (X2A / "score" / "tost.json").write_text(json.dumps(out, ensure_ascii=False, indent=1))
 
 
