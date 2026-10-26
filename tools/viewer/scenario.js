@@ -66,6 +66,8 @@ function linearizeVertexColors(obj) {
   obj.traverse((o) => {
     const c = o.isMesh && o.geometry.attributes.color;
     if (!c || o.geometry.userData.vhlLinear) return;
+    // view.glb((iv) 보정본)는 COLOR_0 이 이미 선형 float32 — 다시 바꾸면 두 번 어두워진다. glbbuild 원본은 uint8 정규화.
+    if (c.array instanceof Float32Array && !c.normalized) { o.geometry.userData.vhlLinear = true; return; }
     const n = c.count, w = c.itemSize, out = new Float32Array(n * w);
     const f = (x) => (x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
     for (let i = 0; i < n; i++) {

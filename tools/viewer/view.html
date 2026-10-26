@@ -143,9 +143,12 @@ async function init() {
   document.title = `VHL · ${it.title}`;
   document.getElementById('title').textContent = it.title;
   document.getElementById('sub').textContent = `${it.root_name} · ${new Date(it.mtime * 1000).toLocaleString()}`;
-  // 기본 표시: 마스크·voxel 이 아닌 첫 GLB. 마스크 GLB 는 겹치기 후보로.
+  // 기본 표시: ?model= → 보기용 view.glb((iv) 보정본, chief 15:2x 4a) → output/edit/result → 마스크·voxel 이 아닌 첫 GLB.
+  // 마스크 GLB 는 겹치기 후보로.
   const isMask = (n) => /mask|region|delete/i.test(n);
-  const pref = it.models.find((n) => /output|edit|result/i.test(n)) || it.models.find((n) => !isMask(n)) || it.models[0];
+  const want = new URLSearchParams(location.search).get('model');
+  const pref = (want && it.models.includes(want) ? want : null) || it.models.find((n) => n === 'view.glb')
+    || it.models.find((n) => /output|edit|result/i.test(n)) || it.models.find((n) => !isMask(n)) || it.models[0];
   modelSel.innerHTML = it.models.map((n) => `<option ${n === pref ? 'selected' : ''}>${n}</option>`).join('');
   overlaySel.innerHTML += it.models.map((n) => `<option>${n}</option>`).join('');
   const imgs = document.getElementById('imgs');
@@ -163,6 +166,7 @@ async function init() {
     pre.hidden = false;
   });
   await showMain(pref);
+  document.body.dataset.ready = '1';   // tools/viewer/capture.mjs 가 기다리는 표시
 }
 
 modelSel.addEventListener('change', () => showMain(modelSel.value).catch((e) => { status.textContent = '불러오기 실패'; console.error(e); }));
