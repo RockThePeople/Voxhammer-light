@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>X3 평가</title>
+<style>
+  :root { --bg:#fafafa; --fg:#1d1d1f; --muted:#666; --line:#ddd; --card:#fff; --pick:#2563eb; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#151517; --fg:#eee; --muted:#9a9a9a; --line:#333; --card:#1f1f22; --pick:#60a5fa; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 system-ui, sans-serif; }
+  header { position:sticky; top:0; background:var(--bg); border-bottom:1px solid var(--line); padding:10px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; z-index:2; }
+  header h1 { font-size:16px; margin:0; }
+  #prog { color:var(--muted); }
+  main { padding:12px 16px 40px; max-width:1500px; margin:0 auto; }
+  .item { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; margin:0 0 16px; }
+  .item h2 { font-size:15px; margin:0 0 4px; }
+  .prompt { color:var(--muted); margin:0 0 10px; }
+  .slots { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+  @media (max-width: 800px) { .slots { grid-template-columns:1fr; } }
+  .slot { border:1px solid var(--line); border-radius:6px; padding:6px; }
+  .slot b { display:block; margin-bottom:4px; }
+  .slot .imgs { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+  .slot img { width:100%; height:auto; background:#fff; border-radius:4px; cursor:zoom-in; }
+  .q { display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+  .q span { min-width:220px; }
+  .q button { border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:6px; padding:5px 14px; cursor:pointer; font-weight:600; }
+  .q button.on { background:var(--pick); border-color:var(--pick); color:#fff; }
+  #zoom { position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:5; }
+  #zoom img { max-width:95vw; max-height:95vh; background:#fff; }
+</style>
+</head>
+<body>
+<header><h1>X3 연속 편집 평가</h1><span id="prog"></span>
+  <span style="color:var(--muted)">항목마다 세 결과(A·B·C, 순서 무작위)를 보고 두 질문에 하나씩 고른다. 각 칸 왼쪽 = 편집 시점, 오른쪽 = 3/4 시점. 이미지를 누르면 크게 본다.</span></header>
+<main id="list"></main>
+<div id="zoom"><img alt=""></div>
+<script>
+const Q = [["preserve", "보존 상태가 가장 좋은 것"], ["prompt", "편집이 프롬프트대로 된 것"]];
+let data = { items: [], choices: {} };
+const img = (p) => `/x3img?p=${encodeURIComponent(p)}`;
+function progress() {
+  const n = data.items.length * Q.length;
+  const done = data.items.reduce((s, it) => s + Q.filter(([k]) => data.choices[it.id] && data.choices[it.id][k]).length, 0);
+  document.getElementById("prog").textContent = `${done} / ${n} 선택`;
+}
+function render() {
+  const list = document.getElementById("list");
+  list.innerHTML = data.items.length ? "" : "<p>평가 자료가 아직 없다(X3 실행 뒤 준비).</p>";
+  for (const it of data.items) {
+    const el = document.createElement("section");
+    el.className = "item";
+    el.innerHTML = `<h2>${it.asset} · ${it.round}회차</h2><p class="prompt">“${it.prompt}”</p>
+      <div class="slots">${it.slots.map((s) => `<div class="slot"><b>${s.slot}</b><div class="imgs">
+        <img loading="lazy" src="${img(s.edit)}" alt="${s.slot} 편집 시점"><img loading="lazy" src="${img(s.v34)}" alt="${s.slot} 3/4 시점"></div></div>`).join("")}</div>
+      ${Q.map(([k, label]) => `<div class="q" data-q="${k}"><span>${label}</span>${["A", "B", "C"].map((s) =>
+        `<button data-s="${s}" class="${data.choices[it.id] && data.choices[it.id][k] && data.choices[it.id][k].slot === s ? "on" : ""}">${s}</button>`).join("")}</div>`).join("")}`;
+    el.querySelectorAll(".q button").forEach((b) => b.addEventListener("click", async () => {
+      const qk = b.parentElement.dataset.q;
+      const r = await fetch("/api/x3eval/choice", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item: it.id, question: qk, slot: b.dataset.s }) });
+      if (!r.ok) { alert("저장 실패"); return; }
+      data.choices = (await r.json()).choices;
+      b.parentElement.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+      progress();
+    }));
+    el.querySelectorAll("img").forEach((im) => im.addEventListener("click", () => {
+      const z = document.getElementById("zoom"); z.querySelector("img").src = im.src; z.style.display = "flex";
+    }));
+    list.append(el);
+  }
+  progress();
+}
+document.getElementById("zoom").addEventListener("click", (e) => { e.currentTarget.style.display = "none"; });
+fetch("/api/x3eval").then((r) => r.json()).then((d) => { data = d; render(); });
+</script>
+</body>
+</html>
