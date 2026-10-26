@@ -65,6 +65,8 @@ function card(e) {
     if (m && b) extra = `<table class="kv"><tr><td>보존 CD</td><td>${b.cd.toFixed(4)} → ${m.cd.toFixed(4)}</td></tr><tr><td>PSNR(M)</td><td>${b.psnr.toFixed(2)} → ${m.psnr.toFixed(2)}</td></tr><tr><td>CLIP-T 6시점</td><td>${b.clip_t_front6.toFixed(4)} → ${m.clip_t_front6.toFixed(4)}</td></tr></table><div class="mut" style="font-size:12px">base(25) → c15 P1-glb, 14건 평균</div>`; }
   if (e.id === 'X4') { done = e.p0 + e.p1; total = 2 * e.total;
     extra = `<div class="mut" style="font-size:12px">P0 ${e.p0}/${e.total} · P1 ${e.p1}/${e.total}${e.empty_mask_edit ? ' · 빈 마스크 편집: ' + esc(e.empty_mask_edit.empty_mask_edit) : ''} · 채점 ${e.scored.length}/11 자산</div>`; }
+  if (e.id === 'X2-A') { done = e.done; total = e.total;
+    extra = (e.stalled ? `<div style="color:#d33;font-weight:600">⚠ 실행 프로세스 없음 — 중단됨(로그 확인)</div>` : '') + `<div class="mut" style="font-size:12px">${e.current.length ? '진행 중: ' + esc(e.current[0]) : ''}</div>`; }
   if (e.id === 'X3') { done = e.total_done; total = e.total;
     extra = (e.stalled ? `<div style="color:#d33;font-weight:600">⚠ 실행 프로세스 없음 — 중단됨(로그 확인)</div>` : '') + `<div class="mut" style="font-size:12px">P0 ${e.done.p0}/15 · P1 ${e.done.p1}/15 · P2 ${e.done.p2}/15 · 남은 시간 약 ${fmt(e.eta_s)} · 채점 ${e.scored.length}/3 자산</div>`; }
   if (total) state = done >= total ? 'done' : (done > 0 || e.running) ? 'running' : 'pending';
