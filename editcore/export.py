@@ -102,7 +102,118 @@ def occupancy_changed_chunks(parent_cells, child_cells):
     return set(chunk_keys_sorted(voxel_to_chunk(np.stack([d // 4096, (d // 64) % 64, d % 64], 1))))
 
 
-def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="vhl", version=1, hooks=None):
+# ── 청크 경계 이음새: 측정·스냅 (chief 결정 2026-10-26 (a) 경계 스냅 — 현행 서비스 동작 복원) ──────────────────
+# origin: legacy/a5000/edit_service/lab/seam.py:{seam_pairs,shared_face_verts,measure_seams,snap_boundary}
+# 레거시는 청크 한 변을 8 셀로 가정(CHUNK_SPAN = 8/64)했다. 계약은 D75 로 4 셀이 됐으므로 deltacontract.coords.CHUNK_SIZE 를 쓴다.
+MESH_CELL = 1.0 / 256.0
+SEAM_MATCH_RADIUS = 4 * MESH_CELL
+SNAP_CELLS = 2.0
+
+
+def _chunk_box(key):
+    _contract()
+    from deltacontract.coords import CHUNK_SIZE, VOXEL_RES, parse_chunk_key
+    span = CHUNK_SIZE / VOXEL_RES
+    lo = np.asarray(parse_chunk_key(key), dtype=np.float64) * span - 0.5
+    return lo, lo + span
+
+
+def _shared_face_verts(pos, key_self, key_other, tol=MESH_CELL):
+    """두 26-이웃 청크의 공유 경계(면·모서리·꼭짓점)에 tol 이내로 붙은 정점."""
+    from deltacontract.coords import parse_chunk_key
+    a, b = np.asarray(parse_chunk_key(key_self)), np.asarray(parse_chunk_key(key_other))
+    lo, hi = _chunk_box(key_self)
+    keep = np.ones(len(pos), bool)
+    for ax in range(3):
+        d = b[ax] - a[ax]
+        if d > 0:
+            keep &= np.abs(pos[:, ax] - hi[ax]) <= tol
+        elif d < 0:
+            keep &= np.abs(pos[:, ax] - lo[ax]) <= tol
+    return keep
+
+
+def _seam_pairs(fresh, inherited):
+    """(새 바이트 청크, 승계 청크) 26-이웃 쌍."""
+    from deltacontract.coords import parse_chunk_key
+    inh = {k: np.asarray(parse_chunk_key(k)) for k in inherited}
+    out = []
+    for f in fresh:
+        cf = np.asarray(parse_chunk_key(f))
+        out += [(f, o) for o, co in inh.items() if np.abs(cf - co).max() == 1]
+    return out
+
+
+def measure_seams(fresh_pos, inherited_pos, pairs):
+    """이음새 정량화: 새 청크와 승계 청크의 공유 경계 정점끼리 최근접 거리(대응 반경 안 쌍만). 단위 메시 셀(1/256)."""
+    from scipy.spatial import cKDTree
+    dists, faces, unmatched, total = [], 0, 0, 0
+    for f, o in pairs:
+        pi, po = fresh_pos.get(f), inherited_pos.get(o)
+        if pi is None or po is None or not len(pi) or not len(po):
+            continue
+        mi, mo = _shared_face_verts(pi, f, o), _shared_face_verts(po, o, f)
+        if not mi.any() or not mo.any():
+            continue
+        faces += 1
+        for a, b in ((pi[mi], po), (po[mo], pi)):
+            d, _ = cKDTree(b).query(a)
+            total += d.size
+            hit = d <= SEAM_MATCH_RADIUS
+            unmatched += int((~hit).sum())
+            if hit.any():
+                dists.append(d[hit])
+    d = np.concatenate(dists) if dists else np.zeros(0)
+    return {"seam_faces": faces, "boundary_vertices": total, "unmatched": unmatched,
+            "matched": int(d.size), "cells_max": float(d.max() / MESH_CELL) if d.size else None,
+            "cells_median": float(np.median(d) / MESH_CELL) if d.size else None,
+            "cells_p99": float(np.percentile(d, 99) / MESH_CELL) if d.size else None,
+            "zero_ratio": float((d == 0).mean()) if d.size else None,
+            "over_cell": int((d > MESH_CELL).sum())}
+
+
+def snap_boundary(chunks, fresh, inherited_pos, cells=SNAP_CELLS):
+    """새 청크의 경계 정점을 이웃 승계 청크의 대응 경계 정점으로 스냅한다(새 청크 쪽만 — 승계 바이트는 그대로, R11).
+    임계값(cells 메시 셀) 밖은 위상이 실제로 다른 곳이라 건드리지 않는다. 바뀐 청크는 canonicalize 후 다시 인코딩한다.
+    반환: (바뀐 청크 {키: ChunkMesh}, 통계)."""
+    from scipy.spatial import cKDTree
+    from deltacontract.chunkbin import canonicalize
+    from deltacontract.coords import parse_chunk_key
+    thr = cells * MESH_CELL
+    by_fresh = {}
+    for f, o in _seam_pairs(fresh, inherited_pos):
+        by_fresh.setdefault(f, []).append(o)
+    changed, moved, n_cand, n_snap = {}, [], 0, 0
+    for f, outs in by_fresh.items():
+        m = chunks[f]
+        pos = np.asarray(m.positions, np.float64).copy()
+        ref, sel = [], np.zeros(len(pos), bool)
+        for o in outs:
+            q = inherited_pos[o]
+            ref.append(q[_shared_face_verts(q, o, f)])
+            sel |= _shared_face_verts(pos, f, o)
+        ref = [r for r in ref if len(r)]
+        if not ref or not sel.any():
+            continue
+        ref = np.concatenate(ref)
+        idx = np.flatnonzero(sel)
+        n_cand += idx.size
+        d, j = cKDTree(ref).query(pos[idx])
+        hit = (d <= thr) & (d > 0)
+        if not hit.any():
+            continue
+        moved.append(d[hit])
+        n_snap += int(hit.sum())
+        pos[idx[hit]] = ref[j[hit]]
+        changed[f] = canonicalize(chunk_coord=parse_chunk_key(f), positions=pos.astype(np.float32), indices=m.indices,
+                                  normals=m.normals, colors=m.colors, uvs=m.uvs, voxel_count=m.voxel_count)
+    mv = np.concatenate(moved) if moved else np.zeros(0)
+    return changed, {"snap_cells": cells, "candidates": int(n_cand), "snapped": int(n_snap), "chunks_changed": len(changed),
+                     "move_mean_cells": float(mv.mean() / MESH_CELL) if mv.size else 0.0,
+                     "move_max_cells": float(mv.max() / MESH_CELL) if mv.size else 0.0}
+
+
+def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="vhl", version=1, hooks=None, snap=True):
     """R4 쓰기부: 변경 집합(book 인자 = 부기 ∪ 점유 변경) 밖 청크는 부모 바이트를 그대로 복사(R11 승계), 안·부모에 없는 청크는 새 바이트.
     부모에만 있고 새 디코딩에 없는 부기 밖 청크도 부모 바이트로 남긴다(부기 밖은 바뀌지 않는다).
     부기 안에서 기하가 사라진 부모 청크는 removed 로 적는다(계약 3.4.3)."""
@@ -130,6 +241,21 @@ def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="
                 if pdir is not None and k not in book and k not in parent:
                     new_outside.append(k)
         removed = sorted(k for k in book if k in parent and k not in final)
+    seam = None
+    if snap and pdir is not None and sent and reused:
+        with span("seam_snap", 7) if span else _null():
+            inh_pos = {k: np.asarray(dc.decode(final[k][1]).positions, np.float64) for k in reused}
+            pairs = _seam_pairs(sent, reused)
+            near = {o for _, o in pairs}
+            inh_pos = {k: v for k, v in inh_pos.items() if k in near}
+            before = measure_seams({k: np.asarray(chunks[k].positions, np.float64) for k in sent}, inh_pos, pairs)
+            snapped, st = snap_boundary(chunks, sent, inh_pos)
+            chunks = dict(chunks)
+            for k, cm in snapped.items():
+                chunks[k] = cm
+                final[k] = ("fresh", dc.encode(cm))
+            after = measure_seams({k: np.asarray(chunks[k].positions, np.float64) for k in sent}, inh_pos, pairs)
+            seam = {"before": before, "after": after, **st}
     with span("cbin_write", 7) if span else _null():
         entries = {}
         for k, (src, b) in final.items():
@@ -142,7 +268,7 @@ def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="
         (out_dir / "manifest.json").write_text(man.model_dump_json(indent=2))
     return {"chunks": len(final), "sent": sent, "reused": reused, "removed": removed, "new_outside": new_outside, "book": sorted(book),
             "sent_bytes": int(sum(len(final[k][1]) for k in sent)), "total_bytes": int(sum(len(v[1]) for v in final.values())),
-            "parent_dir": str(pdir) if pdir else None}
+            "parent_dir": str(pdir) if pdir else None, "seam": seam}
 
 
 def bookkeeping_async(mask_cells, halo=2):

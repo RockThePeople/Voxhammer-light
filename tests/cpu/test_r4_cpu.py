@@ -101,7 +101,7 @@ def test_inherit_outside_book(tmp_path):
     cb, cc, _ = mesh_to_chunks(_Pipe(v2, f, attrs), _slat([[1, 1, 1]]))
     keys = sorted(cb)
     book = set(keys[: len(keys) // 3])
-    res = write_cbin(tmp_path / "out", cb, cc, book=book, parent_dir=parent)
+    res = write_cbin(tmp_path / "out", cb, cc, book=book, parent_dir=parent, snap=False)   # 승계 규칙만(스냅은 따로 테스트)
     out = tmp_path / "out" / "chunks"
     for k in keys:
         if k not in book and k not in pb:                 # 신규: 부모 없음 ∧ 변경 집합 밖 ∧ 결과 기하 있음 → 새 바이트(chief 결정)
@@ -220,3 +220,31 @@ def test_bookkeeping_precompute_same_result(tmp_path):
     b = decode_to_cbin(_Pipe(v2, f, attrs), _slat([[1, 1, 1], [40, 40, 32]]), tmp_path / "b", book=bookkeeping_async(mask, 2), **kw)
     for k in ("sent", "reused", "removed", "new_outside"):
         assert a[k] == b[k]
+
+
+def test_seam_snap_closes_boundary_and_keeps_inherited_bytes(tmp_path):
+    """경계 스냅(chief 2026-10-26): 새 청크의 경계 정점만 이웃 승계 청크 정점으로 옮긴다. 승계 바이트는 그대로."""
+    import deltacontract as dc
+    from editcore.export import mesh_to_chunks, write_cbin
+    v, f, attrs = _grid_mesh(n=40)
+    pb, _, _ = mesh_to_chunks(_Pipe(v, f, attrs), _slat([[1, 1, 1]]))
+    (tmp_path / "p" / "chunks").mkdir(parents=True)
+    for k, b in pb.items():
+        (tmp_path / "p" / "chunks" / f"{k}.cbin").write_bytes(b)
+    v2 = v.copy()
+    v2[:, 2] += 0.0005                                     # 0.13 메시 셀 — 이음새가 생긴다
+    cb, cc, _ = mesh_to_chunks(_Pipe(v2, f, attrs), _slat([[1, 1, 1]]))
+    keys = sorted(cb)
+    book = set(keys[: len(keys) // 2])
+    off = write_cbin(tmp_path / "a", cb, cc, book=book, parent_dir=tmp_path / "p", snap=False)
+    on = write_cbin(tmp_path / "b", cb, cc, book=book, parent_dir=tmp_path / "p")
+    assert off["seam"] is None
+    s = on["seam"]
+    assert s["before"]["seam_faces"] > 0 and s["snapped"] > 0
+    assert s["before"]["cells_max"] > 0.05 and s["after"]["cells_max"] < 1e-6      # 틈이 닫힌다
+    for k in on["reused"]:                                  # 승계 청크는 부모 바이트 그대로
+        assert (tmp_path / "b" / "chunks" / f"{k}.cbin").read_bytes() == pb[k]
+    man = json.loads((tmp_path / "b" / "manifest.json").read_text())["chunks"]
+    for k, e in man.items():                                # 스냅한 청크도 manifest 와 바이트·계약 디코더 일치
+        b = (tmp_path / "b" / "chunks" / f"{k}.cbin").read_bytes()
+        assert e["hash"] == dc.blob_hash(b) and e["index_count"] == dc.decode(b).index_count
