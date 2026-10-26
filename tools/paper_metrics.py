@@ -23,6 +23,8 @@
   (회색 127 배경 합성, 512² 리사이즈, 마스크 NEAREST, LPIPS alex spatial). 16시점 평균.
 - DINO-I = 편집 시점 결과 렌더 vs 그 편집의 2d_edit(Bench DINOv2-base 평균 토큰 코사인). CLIP-T = 편집 시점 결과 렌더 vs 프롬프트
   (Bench CLIP ViT-B/32). 편집 시점은 포크 시점 번호 v → Bench 16시점 번호 {0:2, 1:1, 2:0, 3:7, 4:6}(고도 15°, 같은 방위).
+  E2a(tools/e2a_metrics.py → Bench eval_main) 정의도 같이 낸다: clip_t_front6 = Bench 정면 6시점(0,1,7,8,9,15) 평균,
+  dino_i_ref16 = 결과 16시점 vs 참조 16시점 평균. 같은 렌더에서 E2a 값과 4자리 일치(X0 A-M1 실측). 단일 시점 값은 시점 하나라 흔들림이 크다.
 - 정점색 GLB(R4 `.cbin` → glbbuild)는 렌더 전에 `editcore/render.py:vertex_color_render_glb` (iv) 보정을 건다(chief 보정 2).
 - 정렬 확인 값: v0 SLat 셀 중심(N)에서 v0 메시(N) 표면까지 1셀(N 단위 셀 크기) 이내 비율.
 
@@ -323,6 +325,17 @@ def _image_metrics_main(spec_path, out_path):
         if spec.get("prompt"):
             te = TextAlignmentMetricsEvaluator(device=dev)
             out["clip_t"] = te._compute_clip_similarity(e, spec["prompt"])
+            from eval_modules.data_loader import ImageTextPair
+            front = [spec["res_views"][i] for i in (0, 1, 7, 8, 9, 15)]       # Bench data_loader 정면 −45~45°
+            out["clip_t_front6"] = te.compute_clip_t([ImageTextPair(image_path=q, text=spec["prompt"], id=str(i))
+                                                      for i, q in enumerate(front)])["mean"]
+    if spec.get("ref_views") and spec.get("res_views"):
+        def gray(p):
+            e = Image.open(p)
+            bg = Image.new("RGBA", e.size, (127, 127, 127, 255)); bg.paste(e, (0, 0), e)
+            return bg.convert("RGB").resize((512, 512), Image.BILINEAR)
+        out["dino_i_ref16"] = float(np.mean(ime._calculate_dino_i([gray(q) for q in spec["res_views"]],
+                                                                  [gray(r) for r in spec["ref_views"]])))
     Path(out_path).write_text(json.dumps(out, indent=1))
 
 

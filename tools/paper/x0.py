@@ -2,8 +2,8 @@
 
 base     = $RUNS_DIR/01-port/<이름>/port-r1 (0-1 이식본 25 스텝, E2a base 와 같은 출처) — to_glb, raw 프레임
 c15-glb  = $RUNS_DIR/2026-10-25/<이름>/e2a-c15/r1 (E2a c15) — to_glb, raw 프레임
-c15-cbin = $RUNS_DIR/02-r4/<이름>/r4-on/r1/output_snap.glb (R4 .cbin, R11 승계 + 경계 스냅, tests/gpu/r4_seam.py) — glbbuild 정점색
-           (c15-glb 와 다른 프로세스의 15 스텝 편집이라 편집 셀 feats 는 E14 범위로 다르다. 보존 셀은 비트 동일.)
+c15-cbin = 같은 c15 r1 slat_tgt 를 R4(정정 규칙 R11 + 경계 스냅)로 다시 디코딩한 것(tools/paper/x0_cbin.py,
+           $RUNS_DIR/paper/x0/cbin/<시나리오>/output.glb) — glbbuild 정점색. P1-glb 와 SLat 이 같고 메시 경로만 다르다.
 
     python tools/paper/x0.py [시나리오 …]    # 결과 $RUNS_DIR/paper/x0/<시나리오>/<설정>.json, 요약 x0.json
 """
@@ -40,10 +40,12 @@ def scenarios():
     return out
 
 
-def configs(s):
-    return {"base": (RUNS / "01-port" / s["name"] / "port-r1", "output.glb", False),
-            "c15-glb": (RUNS / E2A_DAY / s["name"] / "e2a-c15" / "r1", "output.glb", False),
-            "c15-cbin": (RUNS / "02-r4" / s["name"] / "r4-on" / "r1", "output_snap.glb", True)}
+def configs(sid, s):
+    """설정 → (메시, slat_tgt, 정점색)."""
+    base, c15 = RUNS / "01-port" / s["name"] / "port-r1", RUNS / E2A_DAY / s["name"] / "e2a-c15" / "r1"
+    return {"base": (base / "output.glb", base / "slat_tgt.safetensors", False),
+            "c15-glb": (c15 / "output.glb", c15 / "slat_tgt.safetensors", False),
+            "c15-cbin": (OUT / "cbin" / sid / "output.glb", c15 / "slat_tgt.safetensors", True)}
 
 
 def main(ids):
@@ -53,25 +55,26 @@ def main(ids):
     for sid in ids or list(S):
         s = S[sid]
         cells = json.loads(Path(s["mask"]).read_text())["mask"]["voxels"]
-        for cfg, (d, glb, vc) in configs(s).items():
+        for cfg, (glb, slat, vc) in configs(sid, s).items():
             o = OUT / sid / f"{cfg}.json"
             if o.is_file():
                 summary.setdefault(sid, {})[cfg] = json.loads(o.read_text())
                 continue
             job = {"asset": {"v0_mesh": str(s["v0"]), "raw_c": s["raw_c"], "raw_s": s["raw_s"], "v0_slat": str(s["slat"])},
                    "ref": {"mesh": str(s["v0"]), "kind": "v0"},
-                   "res": {"mesh": str(d / glb), "kind": "raw", "vertex_color": vc, "slat": str(d / "slat_tgt.safetensors")},
+                   "res": {"mesh": str(glb), "kind": "raw", "vertex_color": vc, "slat": str(slat)},
                    "excl_cells": cells, "rkeep": {"parent_slat": str(s["slat"]), "mask_cells": cells},
                    "edit_view": s["view"], "edit_image": str(s["cond"] / "2d_edit.png"), "prompt": s["prompt"],
                    "work_dir": str(OUT / sid / cfg), "cache_dir": str(OUT / "_cache")}
             r = score(job)
-            r["source"] = str(d / glb)
+            r["source"] = str(glb)
             o.parent.mkdir(parents=True, exist_ok=True)
             o.write_text(json.dumps(r, indent=1))
             summary.setdefault(sid, {})[cfg] = r
             p, im = r["preserved"], r["image"]
             print(f"x0 {sid} {cfg} CD {p['cd']:.4f} NC {p['nc']:.3f} F1 {p['f1']:.3f} PSNR {im['psnr']:.2f} SSIM {im['ssim']:.4f} "
-                  f"LPIPS {im['lpips']:.4f} DINO {im.get('dino_i')} CLIP {im.get('clip_t')}", flush=True)
+                  f"LPIPS {im['lpips']:.4f} DINO {im.get('dino_i'):.4f} CLIP {im.get('clip_t'):.4f} | E2a정의 CLIP6 {im.get('clip_t_front6'):.4f} "
+                  f"DINO16 {im.get('dino_i_ref16'):.4f}", flush=True)
             (OUT / "x0.json").write_text(json.dumps(summary, indent=1))
 
 
