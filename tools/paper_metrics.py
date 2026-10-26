@@ -173,6 +173,54 @@ def surface_metrics(res_pts, res_n, ref_pts, ref_n, tau=F1_TAU):
             "precision": p, "recall": r, "n_res": int(len(res_pts)), "n_ref": int(len(ref_pts))}
 
 
+# ── 보이는 표면(chief 00:5x 2): R4 .cbin 의 가려진 내부 면이 전체 표면 CD·F1 을 불리하게 만든다 → Bench 16시점에서 보이는 점만 ──
+def view_rays(view, res):
+    """Bench/포크 카메라(project 와 같은 정의)의 화소 중심 광선. 반환 (원점 glTF, 방향 glTF (res², 3))."""
+    el, az = math.radians(view[0]), math.radians(view[1] - 90)
+    cam = CAM_R * np.array([math.cos(el) * math.cos(az), math.cos(el) * math.sin(az), math.sin(el)])
+    f = -cam / np.linalg.norm(cam)
+    r = np.cross(f, [0, 0, 1]); r /= np.linalg.norm(r)
+    u = np.cross(r, f)
+    px = (np.arange(res) + 0.5) / res * 2 - 1
+    X, Y = np.meshgrid(px, px)                                   # Y: 화면 아래쪽이 +
+    d = f[None] + (X.ravel()[:, None] * FOV_T) * r[None] - (Y.ravel()[:, None] * FOV_T) * u[None]
+    d /= np.linalg.norm(d, axis=1, keepdims=True)
+    to_glb = lambda b: np.stack([b[..., 0], b[..., 2], -b[..., 1]], -1)   # noqa: E731  Blender (x, −z, y) 의 역
+    return to_glb(cam), to_glb(d)
+
+
+def visible_points(mesh, n=N_SAMPLES, res=256, seed=SEED, views=None):
+    """mesh(N 좌표) 를 Bench 16시점에서 레이캐스팅한 첫 교차점과 면 법선, 합쳐서 n 점(seed 고정)으로 고른다."""
+    import open3d as o3d
+    sc = o3d.t.geometry.RaycastingScene()
+    sc.add_triangles(o3d.core.Tensor(np.asarray(mesh.vertices, np.float32)), o3d.core.Tensor(np.asarray(mesh.faces, np.uint32)))
+    P, N = [], []
+    for v in views or BENCH_VIEWS:
+        o, d = view_rays(v, res)
+        rays = np.concatenate([np.broadcast_to(o, d.shape), d], 1).astype(np.float32)
+        h = sc.cast_rays(o3d.core.Tensor(rays))
+        t = h["t_hit"].numpy()
+        ok = np.isfinite(t)
+        P.append(o[None] + t[ok, None] * d[ok])
+        N.append(h["primitive_normals"].numpy()[ok])
+    P, N = np.concatenate(P), np.concatenate(N)
+    if len(P) > n:
+        idx = np.random.default_rng(seed).choice(len(P), n, replace=False)
+        P, N = P[idx], N[idx]
+    return P, N
+
+
+def visible_metrics(job, excl_cells=None):
+    """job(score 와 같은 형식)의 보존 영역 보이는 표면 CD·NC·F1. excl_cells 를 주면 그 영역(예: 고정 영역)으로."""
+    a = job["asset"]
+    frame = AssetFrame.from_v0(a["v0_mesh"], a.get("raw_c", (0, 0, 0)), a.get("raw_s", 1.0))
+    rp, rn = visible_points(mesh_in_n(job["ref"]["mesh"], frame, job["ref"]["kind"]))
+    qp, qn = visible_points(mesh_in_n(job["res"]["mesh"], frame, job["res"]["kind"]))
+    excl = excluded_set(job.get("excl_cells") if excl_cells is None else excl_cells)
+    rk, qk = preserved_mask(rp, frame, excl), preserved_mask(qp, frame, excl)
+    return {**surface_metrics(qp[qk], qn[qk], rp[rk], rn[rk]), "visible_points": {"ref": int(len(rp)), "res": int(len(qp))}}
+
+
 def alignment_ratio(cells, mesh_n, frame, n=2_000_000):
     """정렬 확인: SLat 셀 중심(N) → 메시 표면(N, 균일 n점 근사) 거리가 1셀 이내인 비율."""
     from scipy.spatial import cKDTree
