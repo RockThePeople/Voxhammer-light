@@ -98,6 +98,11 @@
   - 원본 `358293d` + INT4 `bd90903`. R9 설정: 1024², 50스텝, guidance 30, seed 는 요청(0), 마스크 밖 합성 켬.
 - A5000 실험 스크립트가 `POST http://<3090>:8082/inpaint?wait=1` (규약 §2, multipart image·mask·prompt·seed)로 직접 부른다. 결과는 `GET /jobs/<id>/2d_edit.png`.
 - 워커 변경: `INPAINT_BIND` 를 추가했다(기본 127.0.0.1 그대로, 열 때만 0.0.0.0).
+- **호출별 기록:** 워커를 `RUNS_DIR=runs/paper/x3` 로 다시 띄웠다(호출 0 상태에서 재기동). 호출마다 `runs/paper/x3/r9-inpaint/<job_id>/` 에 다음이 남는다:
+  - `2d_render.png`·`2d_mask.png`·`2d_edit.png`(합성 후)·`2d_edit_raw.png`(합성 전)
+  - `result.json`: 네 파일 sha256, 입력 sha256, 프롬프트·시드, 시간·VRAM
+  - 로그 `runs/paper/x3/r9-inpaint/worker.log`
+- 인증은 없다(chief 답: 보안 조치 하지 않음). LAN 안에서 누구나 부를 수 있다.
 - 호출마다 `2d_render`·`2d_mask`·`2d_edit` 와 해시를 `runs/paper/x3/` 에 남긴다.
 
 ## 4. 변경 파일
