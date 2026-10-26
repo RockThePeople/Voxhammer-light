@@ -177,7 +177,7 @@ def status():
                 {"id": "X4", "title": "무편집 재등록 체인 11자산 × 5회", **x4()},
                 {"id": "X3", "title": "연속 5회 편집 3자산 × P0·P1·P2", **xs},
                 {"id": "X2-A", "title": "기존 14건 P0 × 3 (원저자 경로, 재등록 포함)", **x2a(pr)},
-                {"id": "X2-B", "title": "Edit3D-Bench GSO 30 · PartObjaverse-Tiny 30", "state": "pending", "note": "데이터 확인 완료(내려받기 불요)"},
+                {"id": "X2-B", "title": "Edit3D-Bench 3건(GSO 2 + PartObjaverse-Tiny 1) P0·P1 각 1회", "done": sum(1 for _ in (P / "x2b").glob("p[01]/*/r1/round.json")) if (P / "x2b").exists() else 0, "total": 6, "note": "X2-A 뒤 자동 시작(준비: 인코딩·조건·부모 청크)", "log": tail(P / "x2b.log", 4)},
                 {"id": "X2-C", "title": "종단(인페인팅 → 편집)", "state": "pending", "note": "P1 = 04L 1차 종단 18회(9cf1fda) 재사용"},
             ]}
 
