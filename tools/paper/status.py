@@ -159,11 +159,14 @@ def paused():
 
 
 def status():
-    return {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "gpu": gpu(), "procs": procs(), "paused": paused(),
+    pr = procs()
+    xs = x3()
+    xs["stalled"] = xs["total_done"] < xs["total"] and not any(p["what"] == "tools/paper/x3.py" for p in pr)
+    return {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "gpu": gpu(), "procs": pr, "paused": paused(),
             "experiments": [
                 {"id": "X0", "title": "기존 14건 재채점(25 vs 15, P1-glb·P1-cbin)", **x0()},
                 {"id": "X4", "title": "무편집 재등록 체인 11자산 × 5회", **x4()},
-                {"id": "X3", "title": "연속 5회 편집 3자산 × P0·P1·P2", **x3()},
+                {"id": "X3", "title": "연속 5회 편집 3자산 × P0·P1·P2", **xs},
                 {"id": "X2-A", "title": "기존 14건 P0 × 3 (재등록 포함)", "state": "pending", "note": "X3 뒤"},
                 {"id": "X2-B", "title": "Edit3D-Bench GSO 30 · PartObjaverse-Tiny 30", "state": "pending", "note": "데이터 확인 완료(내려받기 불요)"},
                 {"id": "X2-C", "title": "종단(인페인팅 → 편집)", "state": "pending", "note": "P1 = 04L 1차 종단 18회(9cf1fda) 재사용"},

@@ -285,10 +285,20 @@ def run_p12(asset, path):
         prev = base / f"r{k - 1}"
         if (d / "round.json").exists():
             continue
+        t0 = time.time()
+        slat_in = prev / "slat_tgt.safetensors" if path == "p1" else d / "slat_in.safetensors"
+        pc = prev / "cbin" / "chunks"
+        # 편집은 끝났고(slat_tgt 저장) 디코딩에서 죽은 회차는 다시 편집하지 않고 디코딩만 새 프로세스에서 한다
+        # (INT4 인페인팅·Stage 2 는 호출마다 조금 달라 회차를 처음부터 다시 하면 다른 결과가 된다).
+        if all((d / n).exists() for n in ("slat_tgt.safetensors", "2d_edit.png", "inpaint_int4.json")) and slat_in.exists():
+            print(f"x3 {path} {asset} r{k}: 편집 끝·디코딩 미완 — 디코딩만 이어 한다", flush=True)
+            decode_only(d, slat_in, md / "mask.json", pc)
+            finish_p12(d, path, asset, k, info, slat_in, pc, json.loads((d / "inpaint_int4.json").read_text()), None, t0,
+                       note="디코딩만 별도 프로세스로 이어 함(편집 프로세스가 메시 디코딩 중 GPU 메모리 부족)")
+            continue
         if d.exists():
             shutil.rmtree(d)
         d.mkdir(parents=True)
-        t0 = time.time()
         slat_in = prev / "slat_tgt.safetensors"
         rr = None
         if path == "p2":
@@ -304,24 +314,64 @@ def run_p12(asset, path):
         img.mkdir()
         for n in ("2d_render.png", "2d_mask.png", "2d_edit.png"):
             shutil.copy(d / n, img / n)
-        pc = prev / "cbin" / "chunks"
-        sh([PY, "-m", "editcore.cli", "--slat", slat_in, "--mask_json", md / "mask.json", "--image_dir", img,
-            "--out", d / "output.glb", "--slat_out", d / "slat_tgt.safetensors", "--seed", 0,
-            "--parent_cbin", pc, "--cbin_out", d / "cbin"], d / "edit.log", env={"VHL_R4": "1", "HF_HUB_OFFLINE": "1"})
-        r4 = json.loads((d / "cbin" / "r4.json").read_text())
-        rec = {"path": path.upper(), "asset": asset, "round": k, "prompt": info["prompt"], "edit_view": info["edit_view"],
-               "mask_fingerprint": info["mask_fingerprint"], "slat_in": str(slat_in), "parent_cbin": str(pc), "inpaint": inp,
-               "rereg": rr, "r4": {"sent": len(r4.get("sent", [])), "reused": len(r4.get("reused", [])), "seam": r4.get("seam", {}).get("snapped")},
-               "files_sha256": {n: sha(d / n) for n in ("2d_render.png", "2d_mask.png", "2d_edit.png", "output.glb")},
-               "wall_s": time.time() - t0}
-        write_view(d, path)
-        (d / "round.json").write_text(json.dumps(rec, indent=1))
-        print(f"x3 {path} {asset} r{k} done {rec['wall_s']:.0f}s sent {rec['r4']['sent']} reused {rec['r4']['reused']}", flush=True)
+        note = None
+        try:
+            sh([PY, "-m", "editcore.cli", "--slat", slat_in, "--mask_json", md / "mask.json", "--image_dir", img,
+                "--out", d / "output.glb", "--slat_out", d / "slat_tgt.safetensors", "--seed", 0,
+                "--parent_cbin", pc, "--cbin_out", d / "cbin"], d / "edit.log", env={"VHL_R4": "1", "HF_HUB_OFFLINE": "1", **ALLOC})
+        except SystemExit:
+            if not (d / "slat_tgt.safetensors").exists():
+                raise
+            print(f"x3 {path} {asset} r{k}: editcore 가 편집 뒤 디코딩에서 실패 — 디코딩만 새 프로세스로", flush=True)
+            decode_only(d, slat_in, md / "mask.json", pc)
+            note = "디코딩만 별도 프로세스로 이어 함(편집 프로세스가 메시 디코딩 중 GPU 메모리 부족)"
+        finish_p12(d, path, asset, k, info, slat_in, pc, inp, rr, t0, note)
+
+
+ALLOC = {"PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"}   # 메모리 조각화 완화(계산 결과 무관)
+
+
+def decode_only(d, slat_in, mask_json, pc):
+    """저장된 slat_tgt 를 R4(정정 규칙 + 경계 스냅)로 디코딩 — editcore.cli 의 R4 단계와 같은 호출, 새 프로세스."""
+    shutil.rmtree(d / "cbin", ignore_errors=True)
+    sh([PY, Path(__file__).resolve(), "_decode", d / "slat_tgt.safetensors", slat_in, mask_json, pc, d / "cbin", d / "output.glb"],
+       d / "decode.log", env={"VHL_R4": "1", "HF_HUB_OFFLINE": "1", **ALLOC})
+
+
+def _decode(slat_tgt, slat_in, mask_json, pc, cbin_out, glb_out):
+    import torch
+    from safetensors import safe_open
+    import editcore.models as em
+    import trellis.modules.sparse as sp
+    from editcore.export import decode_to_cbin
+    pipe = em.load_pipeline()
+    with safe_open(str(slat_tgt), "pt") as f:
+        slat = sp.SparseTensor(feats=f.get_tensor("feats").float().cuda(), coords=f.get_tensor("coords").int().cuda())
+    with safe_open(str(slat_in), "np") as f:
+        parent_cells = f.get_tensor("coords")[:, 1:]
+    mask = json.loads(Path(mask_json).read_text())["mask"]["voxels"]
+    with torch.inference_mode():
+        r4 = decode_to_cbin(pipe, slat, Path(cbin_out), mask_cells=mask, parent_dir=pc, parent_cells=parent_cells, glb_path=Path(glb_out))
+    print(f"[r4] decode_only chunks {r4['chunks']} sent {len(r4['sent'])} reused {len(r4['reused'])}", flush=True)
+
+
+def finish_p12(d, path, asset, k, info, slat_in, pc, inp, rr, t0, note=None):
+    r4 = json.loads((d / "cbin" / "r4.json").read_text())
+    rec = {"path": path.upper(), "asset": asset, "round": k, "prompt": info["prompt"], "edit_view": info["edit_view"],
+           "mask_fingerprint": info["mask_fingerprint"], "slat_in": str(slat_in), "parent_cbin": str(pc), "inpaint": inp,
+           "rereg": rr, "r4": {"sent": len(r4.get("sent", [])), "reused": len(r4.get("reused", [])), "seam": r4.get("seam", {}).get("snapped")},
+           "files_sha256": {n: sha(d / n) for n in ("2d_render.png", "2d_mask.png", "2d_edit.png", "output.glb")},
+           "wall_s": time.time() - t0, "note": note}
+    write_view(d, path)
+    (d / "round.json").write_text(json.dumps(rec, indent=1))
+    print(f"x3 {path} {asset} r{k} done {rec['wall_s']:.0f}s sent {rec['r4']['sent']} reused {rec['r4']['reused']}", flush=True)
 
 
 if __name__ == "__main__":
     if sys.argv[1] == "_rereg":
         _rereg(*sys.argv[2:6])
+    elif sys.argv[1] == "_decode":
+        _decode(*sys.argv[2:8])
     elif sys.argv[1] == "views":
         for d in sorted(OUT.glob("p[012]/*/r[0-5]")):
             write_view(d, d.parts[-3])

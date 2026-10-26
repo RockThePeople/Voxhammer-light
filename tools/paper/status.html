@@ -66,7 +66,7 @@ function card(e) {
   if (e.id === 'X4') { done = e.p0 + e.p1; total = 2 * e.total;
     extra = `<div class="mut" style="font-size:12px">P0 ${e.p0}/${e.total} · P1 ${e.p1}/${e.total}${e.empty_mask_edit ? ' · 빈 마스크 편집: ' + esc(e.empty_mask_edit.empty_mask_edit) : ''} · 채점 ${e.scored.length}/11 자산</div>`; }
   if (e.id === 'X3') { done = e.total_done; total = e.total;
-    extra = `<div class="mut" style="font-size:12px">P0 ${e.done.p0}/15 · P1 ${e.done.p1}/15 · P2 ${e.done.p2}/15 · 남은 시간 약 ${fmt(e.eta_s)} · 채점 ${e.scored.length}/3 자산</div>`; }
+    extra = (e.stalled ? `<div style="color:#d33;font-weight:600">⚠ 실행 프로세스 없음 — 중단됨(로그 확인)</div>` : '') + `<div class="mut" style="font-size:12px">P0 ${e.done.p0}/15 · P1 ${e.done.p1}/15 · P2 ${e.done.p2}/15 · 남은 시간 약 ${fmt(e.eta_s)} · 채점 ${e.scored.length}/3 자산</div>`; }
   if (total) state = done >= total ? 'done' : (done > 0 || e.running) ? 'running' : 'pending';
   const lab = {done:'완료', running:'진행 중', pending:'대기'}[state];
   return `<div class="card"><h2>${e.id} <span class="tag ${state}">${lab}</span></h2><div class="mut" style="font-size:12px">${esc(e.title)}</div>
