@@ -42,6 +42,7 @@ a { color:var(--acc); }
   <span class="mut">10초마다 갱신 · <a href="/">뷰어 목록</a></span>
 </header>
 <main>
+  <div id="paused" class="card" hidden style="border-color:var(--run)"></div>
   <div class="cards" id="cards"></div>
   <section>
     <h2 style="font-size:15px;margin:4px 0 8px">X3 연속 5회 편집 <span class="mut" id="x3sum" style="font-weight:400;font-size:13px"></span></h2>
@@ -99,6 +100,11 @@ async function tick() {
     $('time').textContent = s.time;
     $('gpu').textContent = s.gpu ? `GPU ${s.gpu.name} · ${(s.gpu.mem_used_mib/1024).toFixed(1)}/${(s.gpu.mem_total_mib/1024).toFixed(0)} GiB · ${s.gpu.util}%` : '';
     $('cards').innerHTML = s.experiments.map(card).join('');
+    const pz = s.paused, pe = $('paused');
+    pe.hidden = !pz;
+    if (pz) pe.innerHTML = `<b>${pz.resumed_at ? '채점 재개됨 ' + esc(pz.resumed_at) : '채점 일시정지 중'}</b> <span class="mut">(정지 ${esc(pz.paused_at)} · ${esc(pz.reason)})</span>`
+      + '<table class="kv">' + pz.groups.map((g) => `<tr><td>PGID ${g.pgid}</td><td>${esc(g.what)}</td><td>PID ${g.pids.join(', ')} · 상태 ${g.state.join(', ')}</td></tr>`).join('') + '</table>'
+      + `<div class="mut" style="font-size:12px">재개: ${esc(pz.resume)}</div>`;
     const x3 = s.experiments.find((e) => e.id === 'X3');
     $('x3').innerHTML = x3table(x3);
     $('x3sum').textContent = `${x3.total_done}/45 · 회당 평균 P0 ${fmt(x3.mean_wall_s.p0)} · P1 ${fmt(x3.mean_wall_s.p1)} · P2 ${fmt(x3.mean_wall_s.p2)}` + (x3.rereg_sheet ? ' · P2 재등록 색 확인 시트 있음' : '');

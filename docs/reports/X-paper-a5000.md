@@ -16,6 +16,10 @@
   - 모델마다 원본 GLB(`source_model/model.glb`)와 프롬프트 3개
   - 프롬프트마다 `3d_edit_region.glb`(3D 마스크)·`2d_render`·`2d_mask`·`2d_edit`. 텍스트는 `metadata.json`(source_prompt, prompt_1–3).
 - **04L 워커:** 3090 종단 요청이 11:18 에 끝난 뒤, GPU 를 X4 에 쓰려고 11:29 에 내렸다. 04L 코드(assets_track_a.json·인증 끔·e2e 복제 자산)는 병행한다.
+- **채점 일시정지(사용자 지시 16:2x):** X3 회차가 CPU 경합으로 늘어(지프 P1 1회차 328 s 중 조건 렌더 85 s·editcore 211 s, 부하 평균 61 — X0·X4 채점의 Bench Blender 렌더 2개가 32코어 중 약 28개 사용, 실측) X0·X4 채점을 **2026-10-26 16:23:27 에 SIGSTOP** 했다.
+  - PGID 4039842 = `tools/paper/x4_score.py`(PID 4039842, Blender 자식 4134352)
+  - PGID 4064024 = `x0_r23.sh` → `tools/paper/x0.py`(PID 4064024·4064025, Blender 자식 4134529)
+  - X3 45회차가 끝나면 `~/vhl-runs/paper/resume_scoring.sh` 가 SIGCONT 한다. 그 사이에도 X3 자산 하나(P0·P1·P2 5회차)가 끝날 때마다 그 자산의 X3 채점(`tools/paper/x3_score.py <자산>`)은 돌린다. 기록 `$RUNS_DIR/paper/paused.json`, `/paper` 상단 표시.
 
 ## 1. 채점 도구 `tools/paper_metrics.py` (코드확인, CPU 테스트 통과)
 

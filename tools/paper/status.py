@@ -142,8 +142,24 @@ def x0():
     return {"done": n, "total": 42, "means": means}
 
 
+def paused():
+    """일시정지한 채점 프로세스($RUNS_DIR/paper/paused.json)와 지금 상태(T = 정지)."""
+    j = _j(P / "paused.json")
+    if not j:
+        return None
+    for g in j.get("groups", []):
+        st = []
+        for pid in g.get("pids", []):
+            try:
+                st.append(Path(f"/proc/{pid}/stat").read_text().split(") ")[1][0])
+            except Exception:  # noqa: BLE001
+                st.append("없음")
+        g["state"] = st
+    return j
+
+
 def status():
-    return {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "gpu": gpu(), "procs": procs(),
+    return {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "gpu": gpu(), "procs": procs(), "paused": paused(),
             "experiments": [
                 {"id": "X0", "title": "기존 14건 재채점(25 vs 15, P1-glb·P1-cbin)", **x0()},
                 {"id": "X4", "title": "무편집 재등록 체인 11자산 × 5회", **x4()},
