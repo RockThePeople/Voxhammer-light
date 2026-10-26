@@ -25,14 +25,20 @@ def j(p):
     return json.loads(Path(p).read_text()) if Path(p).exists() else {}
 
 
+def _f(v, fmt):
+    return "채점 중" if v is None else format(v, fmt)
+
+
 def x3_tables():
     pre, st, surf = j(X3S / "x3_score.json"), j(X3SS / "x3_score.json"), j(X3S / "surface_iou.json")
+    vf = j(RUNS / "paper" / "visible" / "x3.json")
     out = []
     for a in ASSETS3:
         P, S, U = pre.get(a, {}), st.get(a, {}), surf.get(a, {})
         out += [f"**{NAMES[a]}({a})**", "",
-                "| 경로 | 회차 | CD ↓ | F1@0.01 ↑ | PSNR(M) ↑ | LPIPS(M) ↓ | IoU 표면 셀 ↑ | DINO-I ↑ | CLIP-T ↑ | 참고: 봉합 전 CD / PSNR(M) |",
-                "|---|---|---|---|---|---|---|---|---|---|"]
+                "| 경로 | 회차 | CD 보이는 표면 ↓ | F1 보이는 표면 ↑ | PSNR(M) ↑ | LPIPS(M) ↓ | IoU 표면 셀 ↑ | DINO-I ↑ | CLIP-T ↑ | "
+                "고정 영역 PSNR(M) / LPIPS(M) / 렌더 L* | 참고: 전체 표면 CD / F1 | 참고: 봉합 전 CD / PSNR(M) |",
+                "|---|---|---|---|---|---|---|---|---|---|---|---|"]
         for p in ("p0", "p1", "p2"):
             for k in range(1, 6):
                 key = f"{p}_r{k}_own"
@@ -40,28 +46,42 @@ def x3_tables():
                 if not o:
                     continue
                 im, pr = o["image"], o["preserved"]
+                v = vf.get(f"{a}/{p}_r{k}", {})
+                vc, fx, fl = v.get("visible_cum") or {}, v.get("fixed") or {}, v.get("fixed_render_L") or {}
+                fixed = (f"{fx['image']['psnr']:.2f} / {fx['image']['lpips']:.4f} / {fl['L']:.1f}" if fx and fl else "채점 중")
                 ref = f"{P[key]['preserved']['cd']:.4f} / {P[key]['image']['psnr']:.2f}" if p != "p0" and key in P and key in S else "–"
-                out.append(f"| {p.upper()} | {k} | {pr['cd']:.4f} | {pr['f1']:.3f} | {im['psnr']:.2f} | {im['lpips']:.4f} | "
+                out.append(f"| {p.upper()} | {k} | {_f(vc.get('cd'), '.4f')} | {_f(vc.get('f1'), '.3f')} | {im['psnr']:.2f} | {im['lpips']:.4f} | "
                            f"{U.get(f'{p}_r{k}', {}).get('iou_surf', float('nan')):.4f} | {(im.get('dino_i') or float('nan')):.3f} | "
-                           f"{(im.get('clip_t') or float('nan')):.3f} | {ref} |")
+                           f"{(im.get('clip_t') or float('nan')):.3f} | {fixed} | {pr['cd']:.4f} / {pr['f1']:.3f} | {ref} |")
         out += ["", "설정: P0 = 원저자 경로(매 회차 150시점 재등록 + 25 스텝 + `to_glb`), 인페인팅 A5000 bf16. "
                     "P1 = W34 SLat 재사용 + editcore 15/15 + R4 `.cbin`(R11 승계, 경계 스냅 + 봉합 띠), 인페인팅 3090 INT4. "
                     "P2 = P1 + 매 회차 150시점 재등록, 인페인팅 3090 INT4. 각 경로 자기 직전 결과에서 다음 회차, 반복 없음(표본 1). "
-                    "비교 기준 = 자기 출발점(P0 생성 텍스처 GLB, P1·P2 A_origin R4 `.cbin`), 누적 마스크 ∪ halo 2 밖. "
+                    "비교 기준 = 자기 출발점(P0 생성 텍스처 GLB, P1·P2 A_origin R4 `.cbin`). 주 열의 영역 = 그 회차 누적 마스크 ∪ halo 2 밖. "
+                    "**고정 영역** = 5회차 누적 마스크 ∪ halo 2 밖을 모든 회차에 같게(회차–지표 곡선용). "
+                    "**보이는 표면** = Bench 16시점 레이캐스팅 첫 교차점 100k 점(`.cbin` 의 가려진 내부 면 제외). "
                     "DINO-I·CLIP-T = 편집 시점 1장(자기 2d_edit·프롬프트). IoU 표면 셀 = A_origin 표면이 닿는 셀만(R_keep IoU 는 4절 참고 열).", ""]
     return out
 
 
 def c4_table():
+    vf = j(RUNS / "paper" / "visible" / "x3.json")
     out = ["| 자산 | 경로 | ΔL* r1 | r2 | r3 | r4 | r5 | ΔE r5 | 렌더 L* r0 → r5 |", "|---|---|---|---|---|---|---|---|---|"]
+    fixed_all = True
     for a in ASSETS3:
         r = j(C4 / f"{a}_color.json")
         for p in ("p0", "p1", "p2"):
             if f"{p}_r5" not in r:
                 continue
             dl = " | ".join(f"{r[f'{p}_r{k}']['albedo']['dL']:+.1f}" for k in range(1, 6))
-            out.append(f"| {NAMES[a]} | {p.upper()} | {dl} | {r[f'{p}_r5']['albedo']['dE']:.1f} | "
-                       f"{r[f'{p}_r0']['render']['L']:.1f} → {r[f'{p}_r5']['render']['L']:.1f} |")
+            f0, f5 = (vf.get(f"{a}/{p}_r{k}", {}).get("fixed_render_L") for k in (0, 5))
+            if f0 and f5:
+                rl = f"{f0['L']:.1f} → {f5['L']:.1f}"
+            else:
+                fixed_all = False
+                rl = f"{r[f'{p}_r0']['render']['L']:.1f} → {r[f'{p}_r5']['render']['L']:.1f} (참고)"
+            out.append(f"| {NAMES[a]} | {p.upper()} | {dl} | {r[f'{p}_r5']['albedo']['dE']:.1f} | {rl} |")
+    out += ["", "렌더 L*: " + ("고정 영역(5회차 누적 마스크 ∪ halo 2 밖, 모든 회차 같은 화소 규칙)." if fixed_all else
+                              "**참고(영역이 회차마다 다름)** — 누적 마스크가 커지며 비교 화소가 바뀐다. 고정 영역 값은 채점 중이다. 색 표류의 주 지표는 같은 점 비교인 ΔL*.")]
     return out
 
 
