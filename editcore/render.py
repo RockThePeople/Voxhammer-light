@@ -13,11 +13,119 @@ from pathlib import Path
 from .models import REPO, TRELLIS_ROOT
 
 
-def render_condition(model_glb, mask_glb, out_dir, python=None) -> Path:
+def _fork_condition_render(model_glb, mask_glb, out_dir, python=None) -> dict:
+    """포크 `utils/render_rgb_and_mask.process` 를 수정 없이 부르는 0번 계측 래퍼(EXR 은 bpy 프록시)를 별도 프로세스로."""
     py = python or os.environ.get("VHL_RENDER_PY", sys.executable)
     subprocess.run([py, str(REPO / "reference" / "run_condition_render.py"), "--model", str(model_glb),
-                    "--mask", str(mask_glb), "--out", str(out_dir), "--reference", str(TRELLIS_ROOT)], check=True)
-    return Path(out_dir) / "images"
+                    "--mask", str(mask_glb), "--out", str(out_dir), "--reference", str(TRELLIS_ROOT)], check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    import json
+    return json.loads((Path(out_dir) / "timing.json").read_text())
+
+
+# ── 04L 조건 렌더 (R8a A-2 규칙, R10a 는 나중에 render_condition 안에 끼운다) ───────────────────────
+# 시점 정의: 포크 render_rgb_and_mask.py — 반지름 1.8, 고도 15°, 방위 [90,45,0,315,270][v] − 90, 원점 주시,
+# bpyrenderer 기본 센서 32 mm·렌즈 35 mm(세로 화각 49.13°), 1024².
+FORK_VIEWS = 5
+_AZ = [90, 45, 0, 315, 270]
+
+
+def _cells_boundary_mesh(cells):
+    """마스크 셀 합집합의 노출면(닫힌 표면) — scenarios/s5_masks.py:boundary_mesh 와 같다. 좌표는 복셀 프레임 [-0.5, 0.5]."""
+    # origin: scenarios/s5_masks.py:boundary_mesh (00s2 동결 마스크 GLB 생성)
+    import numpy as np
+    occ = {tuple(int(x) for x in c) for c in np.asarray(cells).reshape(-1, 3)}
+    dirs = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)]
+    verts, faces = [], []
+    for (i, j, k) in occ:
+        for d in dirs:
+            if (i + d[0], j + d[1], k + d[2]) in occ:
+                continue
+            ax = int(np.nonzero(d)[0][0])
+            o = [i, j, k]
+            o[ax] += 1 if d[ax] > 0 else 0
+            u, v = [x for x in range(3) if x != ax]
+            q = []
+            for du, dv in ((0, 0), (1, 0), (1, 1), (0, 1)):
+                p = list(o); p[u] += du; p[v] += dv
+                q.append(p)
+            if d[ax] < 0:
+                q = q[::-1]
+            if ax == 1:
+                q = q[::-1]
+            b = len(verts)
+            verts.extend(q)
+            faces.extend([(b, b + 1, b + 2), (b, b + 2, b + 3)])
+    return np.asarray(verts, float) / 64.0 - 0.5, np.asarray(faces, np.int64)
+
+
+def _voxel_to_glb(v):
+    import numpy as np
+    v = np.asarray(v, float)
+    return np.stack([v[:, 0], v[:, 2], -v[:, 1]], 1)   # ai-ar-v3 frames.VOXEL_TO_GLB (D9)
+
+
+def write_mask_glb(cells, xf, path):
+    """조건 렌더용 mask.glb: 셀 노출면 → GLB 프레임 → 판본 정규화 (p − c) × s (s5_masks 와 같은 변환)."""
+    import numpy as np
+    import trimesh
+    v, f = _cells_boundary_mesh(cells)
+    vg = (_voxel_to_glb(v) - np.asarray(xf["center"])) * float(xf["scale"])
+    trimesh.Trimesh(vg, f, process=True).export(str(path))
+    return Path(path)
+
+
+def mask_area_per_view(cells, xf, res=256):
+    """마스크 셀(halo 전)을 5시점 카메라로 투영한 화면 면적(화소 수, res²). 렌더 없이 계산(가림 없음)."""
+    import math
+    import numpy as np
+    from PIL import Image, ImageDraw
+    v, f = _cells_boundary_mesh(cells)
+    g = (_voxel_to_glb(v) - np.asarray(xf["center"])) * float(xf["scale"])
+    b = np.stack([g[:, 0], -g[:, 2], g[:, 1]], 1)        # glTF(Y-up) → Blender(Z-up): (x, −z, y)
+    t = 16.0 / 35.0
+    out = []
+    for view in range(FORK_VIEWS):
+        el, az = math.radians(15), math.radians(_AZ[view] - 90)
+        cam = 1.8 * np.array([math.cos(el) * math.cos(az), math.cos(el) * math.sin(az), math.sin(el)])
+        fwd = -cam / np.linalg.norm(cam)
+        r = np.cross(fwd, [0, 0, 1]); r /= np.linalg.norm(r)
+        u = np.cross(r, fwd)
+        d = b - cam
+        z = d @ fwd
+        px = (d @ r / z / t * 0.5 + 0.5) * res
+        py = (0.5 - d @ u / z / t * 0.5) * res
+        im = Image.new("1", (res, res), 0)
+        dr = ImageDraw.Draw(im)
+        for tri in f:
+            dr.polygon([(px[i], py[i]) for i in tri], fill=1)
+        out.append(int(np.asarray(im).sum()))
+    return out
+
+
+def choose_view(cells, xf):
+    """R8a A-2: view 생략 시 투영 면적 최대 시점(동률이면 낮은 번호)."""
+    a = mask_area_per_view(cells, xf)
+    return int(max(range(FORK_VIEWS), key=lambda i: (a[i], -i))), a
+
+
+def render_condition(mesh, mask_cells, view, *, xf, out_dir, python=None) -> dict:
+    """조건 렌더 1회: 원본 메시(GLB) + 마스크 셀 → 요청 시점 1장(2d_render.png) + 2D 마스크(2d_mask.png).
+    지금은 포크 렌더러(5시점, 수정 없음)를 그대로 쓰고 요청 시점만 고른다. R10a 는 이 함수 안에 끼운다."""
+    import shutil
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    mask_glb = write_mask_glb(mask_cells, xf, out / "mask.glb")
+    t = _fork_condition_render(mesh, mask_glb, out / "fork", python=python)
+    img = out / "fork" / "images"
+    shutil.copyfile(img / f"render_{int(view):04d}.png", out / "2d_render.png")
+    shutil.copyfile(img / f"mask_{int(view):04d}.png", out / "2d_mask.png")
+    spans = {s["name"]: s["seconds"] for s in t.get("spans", [])}
+    return {"render": out / "2d_render.png", "mask": out / "2d_mask.png", "view": int(view),
+            "timing": {"total_s": spans.get("condition_render_total"), "source_5views_s": spans.get("render_source_5views"),
+                       "mask_5views_s": spans.get("render_mask_5views"), "import_s": t.get("import_seconds")},
+            "renderer": {"name": "fork utils/render_rgb_and_mask.py (Blender Cycles)", "views": FORK_VIEWS, "resolution": 1024,
+                         "exr_reader": t.get("exr_reader")}}
 
 
 # ── 2번 R4 렌더 입력 보정 (R-2, chief 승인 2026-10-26) ─────────────────────────────────────────

@@ -282,7 +282,7 @@ def bookkeeping_async(mask_cells, halo=2):
 
 
 def decode_to_cbin(pipeline, slat_tgt, out_dir, *, mask_cells=None, parent_dir=None, parent_cells=None, halo=2,
-                   glb_path=None, hooks=None, book=None):
+                   glb_path=None, hooks=None, book=None, asset_id="vhl", version=1):
     """R4 진입점. `out_dir/chunks/*.cbin`·`manifest.json`·`r4.json`, 그리고 glb_path 가 있으면 `.cbin` 에서 조립한
     정점색 GLB(ai-ar-v3 `server/glbbuild.build_glb`, 렌더·뷰어 입력)를 쓴다.
     변경 청크 = 부기(마스크 ∪ halo) ∪ 점유 변경(parent_cells 가 있으면, R11 — chief 정정 2026-10-26). 나머지는 부모 승계."""
@@ -296,7 +296,7 @@ def decode_to_cbin(pipeline, slat_tgt, out_dir, *, mask_cells=None, parent_dir=N
             book = bookkeeping(mask_cells, halo)
         if parent_cells is not None and parent_dir:
             occ = occupancy_changed_chunks(parent_cells, slat_tgt.coords[:, 1:].detach().cpu().numpy())
-    res = write_cbin(out_dir, blobs, chunks, book=book | occ, parent_dir=parent_dir, hooks=hooks)
+    res = write_cbin(out_dir, blobs, chunks, book=book | occ, parent_dir=parent_dir, hooks=hooks, asset_id=asset_id, version=version)
     exist = set(res["sent"]) | set(res["reused"]) | set(res["removed"])
     res.update({"mesh": info, "rule": "부기 ∪ 점유 변경 ∪ 신규 (R11, chief 2026-10-26)", "book_raw": len(book), "book_existing": len(book & exist),
                 "occupancy_changed": len(occ & exist), "occupancy_only_added": len((occ - book) & exist)})
