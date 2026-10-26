@@ -248,3 +248,33 @@ def test_seam_snap_closes_boundary_and_keeps_inherited_bytes(tmp_path):
     for k, e in man.items():                                # 스냅한 청크도 manifest 와 바이트·계약 디코더 일치
         b = (tmp_path / "b" / "chunks" / f"{k}.cbin").read_bytes()
         assert e["hash"] == dc.blob_hash(b) and e["index_count"] == dc.decode(b).index_count
+
+
+def test_seam_stitch_reduces_open_edges_and_keeps_inherited_bytes(tmp_path, monkeypatch):
+    """봉합 띠(chief 21:4x (d), VHL_R4_STITCH): 부모와 다른 분할(T-접합 틈)에서 열린 모서리가 줄고, 승계 바이트는 그대로, 토글 기본 꺼짐."""
+    import deltacontract as dc
+    from editcore.export import assembled_open_edges, mesh_to_chunks, stitch_enabled, write_cbin
+    monkeypatch.delenv("VHL_R4_STITCH", raising=False)
+    assert not stitch_enabled()                                # 결과가 바뀌는 항목 → 기본 꺼짐
+    v, f, attrs = _grid_mesh(n=240)                            # 정점 간격 ≈ 1 메시 셀(디코더 메시와 비슷)
+    pb, _, _ = mesh_to_chunks(_Pipe(v, f, attrs), _slat([[1, 1, 1]]))
+    (tmp_path / "p" / "chunks").mkdir(parents=True)
+    for k, b in pb.items():
+        (tmp_path / "p" / "chunks" / f"{k}.cbin").write_bytes(b)
+    v2, f2, a2 = _grid_mesh(n=223)                             # 분할이 다르다 → 경계 정점이 어긋나 틈이 생긴다
+    cb, cc, _ = mesh_to_chunks(_Pipe(v2, f2, a2), _slat([[1, 1, 1]]))
+    keys = sorted(cb)
+    book = set(keys[: len(keys) // 2])
+    off = write_cbin(tmp_path / "a", cb, cc, book=book, parent_dir=tmp_path / "p")
+    on = write_cbin(tmp_path / "b", cb, cc, book=book, parent_dir=tmp_path / "p", stitch=True)
+    assert "stitch" not in (off["seam"] or {})
+    st = on["seam"]["stitch"]
+    assert st["strip_faces"] > 0 and st["open_edges_after"] < st["open_edges_before"]
+    for k in on["reused"]:                                     # 승계 청크는 부모 바이트 그대로(R11)
+        assert (tmp_path / "b" / "chunks" / f"{k}.cbin").read_bytes() == pb[k]
+    meshes = {p.stem: dc.decode(p.read_bytes()) for p in (tmp_path / "b" / "chunks").glob("*.cbin")}
+    assert len(assembled_open_edges(meshes)[1]) == st["open_edges_after"]
+    man = json.loads((tmp_path / "b" / "manifest.json").read_text())["chunks"]
+    for k, e in man.items():
+        b = (tmp_path / "b" / "chunks" / f"{k}.cbin").read_bytes()
+        assert e["hash"] == dc.blob_hash(b) and e["index_count"] == dc.decode(b).index_count

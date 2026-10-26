@@ -213,7 +213,165 @@ def snap_boundary(chunks, fresh, inherited_pos, cells=SNAP_CELLS):
                      "move_max_cells": float(mv.max() / MESH_CELL) if mv.size else 0.0}
 
 
-def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="vhl", version=1, hooks=None, snap=True):
+# ── 청크 경계 봉합 띠 (chief 결정 2026-10-26 21:4x (d), 토글 VHL_R4_STITCH, 기본 꺼짐 — 결과가 바뀐다) ─────────────
+# 스냅(정점 이동)만으로는 새 청크와 승계 청크의 경계 분할이 달라 열린 틈이 남는다(T-접합·한쪽에만 있는 면 띠, X3 C4 실측:
+# 지프 P1 r1 열린 모서리 3,981, 대부분 끝이 열린 짧은 사슬). 조립 메시를 용접해 열린 모서리 덩어리마다 정점을 최적 평면에
+# 투영·Delaunay 삼각분할하고, 변이 STITCH_MAX_EDGE 이하인 삼각형만 그 덩어리 모서리를 가장 많이 가진 **새 청크**에 더한다.
+# 새 청크 모서리가 하나도 없는 덩어리(승계 청크끼리의 틈)는 건드리지 않는다. 승계 청크 바이트는 그대로(R11).
+STITCH_MAX_EDGE = 4 * MESH_CELL          # 지프 P1 r1 실측: 2 셀 → 어두운 화소 486→389, 4 셀 → 290
+STITCH_WELD = 64 * 2000          # 용접 격자: 1/2000 복셀 셀
+
+
+def stitch_enabled():
+    import os
+    return os.environ.get("VHL_R4_STITCH", "0") == "1"
+
+
+def assembled_open_edges(meshes):
+    """청크 메시들을 이어 붙여 용접한 뒤 열린 모서리(면 하나에만 속한 모서리). 반환 (용접 정점 위치, 열린 모서리 (n,2), 모서리 소유 청크, 대표 원본 (청크, 정점))."""
+    keys, P, F, own, src = sorted(meshes), [], [], [], []
+    off = 0
+    for k in keys:
+        m = meshes[k]
+        pos = np.asarray(m.positions, np.float64)
+        P.append(pos)
+        F.append(np.asarray(m.indices, np.int64).reshape(-1, 3) + off)
+        own += [k] * (len(m.indices) // 3)
+        src += [(k, i) for i in range(len(pos))]
+        off += len(pos)
+    if not off:
+        return np.zeros((0, 3)), np.zeros((0, 2), np.int64), np.array([]), []
+    P, F, own = np.concatenate(P), np.concatenate(F), np.asarray(own)
+    q = np.round(P * STITCH_WELD).astype(np.int64)
+    _, first, inv = np.unique(q, axis=0, return_index=True, return_inverse=True)
+    inv = inv.reshape(-1)
+    FF = inv[F]
+    e = np.concatenate([FF[:, [0, 1]], FF[:, [1, 2]], FF[:, [2, 0]]])
+    eo = np.concatenate([own, own, own])
+    es = np.sort(e, 1)
+    ue, idx, cnt = np.unique(es, axis=0, return_index=True, return_counts=True)
+    open_ = (cnt == 1) & (ue[:, 0] != ue[:, 1])
+    return P[first], ue[open_], eo[idx[open_]], [src[i] for i in first]
+
+
+def _nearest_fresh(pts, fresh):
+    """덩어리 정점이 든 청크와 그 26-이웃 중 새 청크(정점 수가 가장 많은 쪽)."""
+    from deltacontract.coords import CHUNK_SIZE, VOXEL_RES, parse_chunk_key
+    span = CHUNK_SIZE / VOXEL_RES
+    fk = {tuple(parse_chunk_key(k)): k for k in fresh}
+    votes = {}
+    for c in np.floor((pts + 0.5) / span).astype(int):
+        for d in np.array(np.meshgrid([-1, 0, 1], [-1, 0, 1], [-1, 0, 1], indexing="ij")).reshape(3, -1).T:
+            k = fk.get(tuple(c + d))
+            if k:
+                votes[k] = votes.get(k, 0) + (3 if not d.any() else 1)
+    return max(votes, key=votes.get) if votes else None
+
+
+def stitch_seams(meshes, fresh, max_edge=STITCH_MAX_EDGE, inherited_only=True):
+    """meshes: 최종 청크 {키: ChunkMesh}(새 + 승계), fresh: 새 청크 키. 반환 (바뀐 새 청크 {키: ChunkMesh}, 통계).
+    inherited_only: 새 청크 모서리가 없는 덩어리도, 그 근처(26-이웃)에 새 청크가 있으면 그 새 청크에 띠를 붙인다."""
+    from collections import defaultdict
+    from scipy.spatial import Delaunay
+    from deltacontract.chunkbin import canonicalize
+    from deltacontract.coords import parse_chunk_key
+    fresh = set(fresh)
+    V, E, Eown, src = assembled_open_edges(meshes)
+    adj = defaultdict(list)
+    for i, (a, b) in enumerate(E):
+        adj[a].append(i)
+        adj[b].append(i)
+    seen, add = set(), defaultdict(list)          # 새 청크 → [(정점 위치 3개, 원본 정점 3개)]
+    n_comp = n_used = n_tri = 0
+    area = 0.0
+    for v0 in list(adj):
+        if v0 in seen:
+            continue
+        stack, comp, eids = [v0], [], set()
+        while stack:
+            x = stack.pop()
+            if x in seen:
+                continue
+            seen.add(x)
+            comp.append(x)
+            for i in adj[x]:
+                eids.add(i)
+                stack.extend(E[i])
+        n_comp += 1
+        if len(comp) < 3:
+            continue
+        owners = [Eown[i] for i in eids if Eown[i] in fresh]
+        pts = V[comp]
+        if owners:
+            target = max(set(owners), key=owners.count)
+        elif inherited_only:
+            target = _nearest_fresh(pts, fresh)
+            if target is None:
+                continue
+        else:
+            continue
+        c = pts.mean(0)
+        _, _, vt = np.linalg.svd(pts - c, full_matrices=False)
+        uv = (pts - c) @ vt[:2].T
+        try:
+            tri = Delaunay(uv, qhull_options="QJ").simplices
+        except Exception:  # noqa: BLE001 — 한 줄로 늘어선 점(넓이 0) 등
+            continue
+        p = pts[tri]
+        el = np.linalg.norm(p - np.roll(p, 1, axis=1), axis=2).max(1)
+        cr = np.cross(p[:, 1] - p[:, 0], p[:, 2] - p[:, 0])
+        ar = 0.5 * np.linalg.norm(cr, axis=1)
+        keep = (el <= max_edge) & (ar > 0)
+        if not keep.any():
+            continue
+        n_used += 1
+        for t in tri[keep]:
+            add[target].append([comp[j] for j in t])
+        n_tri += int(keep.sum())
+        area += float(ar[keep].sum())
+    changed, total_area = {}, 0.0
+    for k, m in meshes.items():
+        pp = np.asarray(m.positions, np.float64)
+        f = pp[np.asarray(m.indices).reshape(-1, 3)]
+        total_area += float(0.5 * np.linalg.norm(np.cross(f[:, 1] - f[:, 0], f[:, 2] - f[:, 0]), axis=1).sum())
+    for k, tris in add.items():
+        m = meshes[k]
+        pos = [np.asarray(m.positions, np.float32)]
+        nrm = [np.asarray(m.normals, np.float32)] if m.normals is not None else None
+        col = [np.asarray(m.colors, np.uint8)] if m.colors is not None else None
+        uvs = [np.asarray(m.uvs, np.float32)] if m.uvs is not None else None
+        idx = [np.asarray(m.indices, np.uint32)]
+        base = len(pos[0])
+        for t in tris:
+            a = []
+            for w in t:                                   # 원본 정점의 속성을 그대로 복사(정점색·법선)
+                sk, si = src[w]
+                sm = meshes[sk]
+                pos.append(np.asarray(sm.positions, np.float32)[si:si + 1])
+                if nrm is not None:
+                    nrm.append(np.asarray(sm.normals, np.float32)[si:si + 1] if sm.normals is not None else np.zeros((1, 3), np.float32))
+                if col is not None:
+                    col.append(np.asarray(sm.colors, np.uint8)[si:si + 1] if sm.colors is not None else np.full((1, 4), 255, np.uint8))
+                if uvs is not None:
+                    uvs.append(np.asarray(sm.uvs, np.float32)[si:si + 1] if sm.uvs is not None else np.zeros((1, 2), np.float32))
+                a.append(base)
+                base += 1
+            P3 = np.concatenate(pos[-3:]).astype(np.float64)
+            fn = np.cross(P3[1] - P3[0], P3[2] - P3[0])
+            vn = np.concatenate(nrm[-3:]).sum(0) if nrm is not None else fn
+            if fn @ vn < 0:                               # 이웃 정점 법선과 같은 쪽을 보게
+                a = [a[0], a[2], a[1]]
+            idx.append(np.asarray(a, np.uint32))
+        changed[k] = canonicalize(chunk_coord=parse_chunk_key(k), positions=np.concatenate(pos), indices=np.concatenate(idx),
+                                  normals=np.concatenate(nrm) if nrm is not None else None,
+                                  colors=np.concatenate(col) if col is not None else None,
+                                  uvs=np.concatenate(uvs) if uvs is not None else None, voxel_count=m.voxel_count)
+    return changed, {"open_edges_before": int(len(E)), "components": n_comp, "components_stitched": n_used,
+                     "strip_faces": n_tri, "strip_area_ratio": area / total_area if total_area else 0.0,
+                     "chunks_changed": len(changed), "max_edge_cells": max_edge / MESH_CELL}
+
+
+def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="vhl", version=1, hooks=None, snap=True, stitch=None):
     """R4 쓰기부: 변경 집합(book 인자 = 부기 ∪ 점유 변경) 밖 청크는 부모 바이트를 그대로 복사(R11 승계), 안·부모에 없는 청크는 새 바이트.
     부모에만 있고 새 디코딩에 없는 부기 밖 청크도 부모 바이트로 남긴다(부기 밖은 바뀌지 않는다).
     부기 안에서 기하가 사라진 부모 청크는 removed 로 적는다(계약 3.4.3)."""
@@ -256,6 +414,17 @@ def write_cbin(out_dir, blobs, chunks, *, book=None, parent_dir=None, asset_id="
                 final[k] = ("fresh", dc.encode(cm))
             after = measure_seams({k: np.asarray(chunks[k].positions, np.float64) for k in sent}, inh_pos, pairs)
             seam = {"before": before, "after": after, **st}
+    if (stitch_enabled() if stitch is None else stitch) and pdir is not None and sent and reused:
+        with span("seam_stitch", 7) if span else _null():
+            meshes = {k: (chunks[k] if src == "fresh" else dc.decode(b)) for k, (src, b) in final.items()}
+            stitched, sst = stitch_seams(meshes, sent)
+            chunks = dict(chunks)
+            for k, cm in stitched.items():
+                chunks[k] = cm
+                final[k] = ("fresh", dc.encode(cm))
+            meshes.update(stitched)
+            sst["open_edges_after"] = int(len(assembled_open_edges(meshes)[1]))
+            seam = {**(seam or {}), "stitch": sst}
     with span("cbin_write", 7) if span else _null():
         entries = {}
         for k, (src, b) in final.items():
