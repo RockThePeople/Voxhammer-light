@@ -230,6 +230,46 @@ def rereg(glb_raw, out_slat, rdir, sheet=None):
     sh([PY, Path(__file__).resolve(), "_rereg", glb_raw, out_slat, rdir, sheet or ""], Path(rdir).parent / "rereg.log")
 
 
+# origin: voxhammer/extract_feature.py:extract_features @ f33cd96+patch — 계산은 같고 마지막 grid_sample·시점 평균만 복셀 묶음으로 나눈다.
+# 포크는 150시점 × 1024 × N 을 GPU 에 한 번에 올린다(N ≈ 40k 면 약 24 GB → A5000 메모리 부족). 그 오류가 저장 스레드 안에서
+# 삼켜져 features.npz 없이 "완료" 가 찍힌다(X3 P2 오두막 r1, 2026-10-26 18:53 실측). 복셀마다 계산이 독립이라 나눠도 값은 같다.
+def extract_features_chunked(output_dir, model="dinov2_vitl14_reg", batch_size=10, chunk=8000):
+    import torch
+    import torch.nn.functional as F
+    import utils3d
+    from torchvision import transforms
+    from voxhammer.extract_feature import get_data
+    dinov2_model = torch.hub.load("facebookresearch/dinov2", model, pretrained=True)
+    dinov2_model.eval().cuda()
+    tf = transforms.Compose([transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+    n_patch = 518 // 14
+    metadata = json.loads(Path(output_dir, "transforms.json").read_text())
+    data = []
+    for datum in get_data(metadata["frames"], output_dir):
+        datum["image"] = tf(datum["image"])
+        data.append(datum)
+    positions = torch.from_numpy(utils3d.io.read_ply(os.path.join(output_dir, "voxels.ply"))[0]).float().cuda()
+    indices = ((positions + 0.5) * 64).long()
+    assert torch.all(indices >= 0) and torch.all(indices < 64), "Some vertices are out of bounds"
+    pack = {"indices": indices.cpu().numpy().astype(np.uint8)}
+    pt_lst, uv_lst = [], []
+    with torch.no_grad():
+        for i in range(0, len(data), batch_size):
+            b = data[i: i + batch_size]
+            feats = dinov2_model(torch.stack([d["image"] for d in b]).cuda(), is_training=True)
+            uv = utils3d.torch.project_cv(positions, torch.stack([d["extrinsics"] for d in b]).cuda(),
+                                          torch.stack([d["intrinsics"] for d in b]).cuda())[0] * 2 - 1
+            pt_lst.append(feats["x_prenorm"][:, dinov2_model.num_register_tokens + 1:].permute(0, 2, 1).reshape(len(b), 1024, n_patch, n_patch))
+            uv_lst.append(uv)
+        patchtokens, uv = torch.cat(pt_lst, 0), torch.cat(uv_lst, 0)
+        out = []
+        for s in range(0, uv.shape[1], chunk):
+            g = F.grid_sample(patchtokens, uv[:, s: s + chunk].unsqueeze(1), mode="bilinear", align_corners=False)
+            out.append(np.mean(g.squeeze(2).permute(0, 2, 1).cpu().numpy(), axis=0).astype(np.float16))
+    pack["patchtokens"] = np.concatenate(out, 0)
+    np.savez_compressed(os.path.join(output_dir, "features.npz"), **pack)
+
+
 def _rereg(glb_raw, out_slat, rdir, sheet):
     rdir = Path(rdir)
     rdir.mkdir(parents=True, exist_ok=True)
@@ -254,8 +294,10 @@ def _rereg(glb_raw, out_slat, rdir, sheet):
     corner = np.all((cells == 0) | (cells == 63), axis=1)
     utils3d.io.write_ply(str(rdir / "voxels.ply"), pos[~corner])
     t0 = time.perf_counter()
-    inf.run_feature_extraction(str(rdir))
+    extract_features_chunked(str(rdir))
     t["feature_extraction"] = time.perf_counter() - t0
+    if not (rdir / "features.npz").exists():
+        raise SystemExit(f"features.npz 없음: {rdir}")
     pipe = inf.TrellisImageTo3DPipeline.from_pretrained("microsoft/TRELLIS-image-large")
     pipe.cuda()
     with torch.no_grad():
