@@ -1,0 +1,37 @@
+{
+ "note": "사용자 23:10 — 목록 순서, GSO 2 + PartObjaverse-Tiny 1, prompt_1, 트랙 B 와 겹치면 다음 건",
+ "source": "Edit3D-Bench/data/metadata.json",
+ "skipped": [
+  {
+   "dataset": "GSO",
+   "object": "3D_Dollhouse_TablePurple",
+   "reason": "트랙 B 와 겹침"
+  }
+ ],
+ "scenarios": [
+  {
+   "id": "X2B-1",
+   "dataset": "GSO",
+   "object": "3D_Dollhouse_Happy_Brother",
+   "prompt_id": 1,
+   "prompt": "A dog.",
+   "source_prompt": "A doll boy."
+  },
+  {
+   "id": "X2B-2",
+   "dataset": "GSO",
+   "object": "3D_Dollhouse_Lamp",
+   "prompt_id": 1,
+   "prompt": "A lamp with a carrot pillar.",
+   "source_prompt": "A purple table lamp."
+  },
+  {
+   "id": "X2B-3",
+   "dataset": "PartObjaverse-Tiny",
+   "object": "00200996b8f34f55a2dd2f44d316d107",
+   "prompt_id": 1,
+   "prompt": "A man with a fox on his shoulder.",
+   "source_prompt": "A man with a monkey on his shoulder and a sword in his hand."
+  }
+ ]
+}
