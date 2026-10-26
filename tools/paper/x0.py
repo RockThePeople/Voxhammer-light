@@ -44,16 +44,21 @@ def configs(sid, s, run="r1"):
     """설정 → (메시, slat_tgt, 정점색). run = r1·r2·r3(지시서 14건 × 3회, chief 15:2x 1)."""
     base, c15 = RUNS / "01-port" / s["name"] / f"port-{run}", RUNS / E2A_DAY / s["name"] / "e2a-c15" / run
     cb = OUT / "cbin" / sid if run == "r1" else OUT / "cbin" / sid / run
-    return {"base": (base / "output.glb", base / "slat_tgt.safetensors", False),
-            "c15-glb": (c15 / "output.glb", c15 / "slat_tgt.safetensors", False),
-            "c15-cbin": (cb / "output.glb", c15 / "slat_tgt.safetensors", True)}
+    cfg = {"base": (base / "output.glb", base / "slat_tgt.safetensors", False),
+           "c15-glb": (c15 / "output.glb", c15 / "slat_tgt.safetensors", False),
+           "c15-cbin": (cb / "output.glb", c15 / "slat_tgt.safetensors", True),
+           # 봉합본(chief 21:4x (d), tools/paper/stitch_offline.py) — 같은 slat_tgt, R4 .cbin + 봉합 띠
+           "c15-cbin-st": (OUT / "cbin_stitched" / sid / run / "output.glb", c15 / "slat_tgt.safetensors", True)}
+    want = os.environ.get("X0_CONFIGS")
+    return {k: v for k, v in cfg.items() if k in want.split(",")} if want else {k: v for k, v in cfg.items() if k != "c15-cbin-st"}
 
 
 def main(ids):
     from tools.paper_metrics import score
     S = scenarios()
-    summary = json.loads((OUT / "x0.json").read_text()) if (OUT / "x0.json").is_file() else {}
-    runs_sum = json.loads((OUT / "x0_runs.json").read_text()) if (OUT / "x0_runs.json").is_file() else {}
+    suf = os.environ.get("X0_SUMMARY_SUFFIX", "")      # 다른 프로세스와 요약 파일이 겹치지 않게(예: _st)
+    summary = json.loads((OUT / f"x0{suf}.json").read_text()) if (OUT / f"x0{suf}.json").is_file() else {}
+    runs_sum = json.loads((OUT / f"x0_runs{suf}.json").read_text()) if (OUT / f"x0_runs{suf}.json").is_file() else {}
     for sid, run in [(i, r) for i in (ids or list(S)) for r in os.environ.get("X0_RUNS", "r1").split(",")]:
         s = S[sid]
         cells = json.loads(Path(s["mask"]).read_text())["mask"]["voxels"]
@@ -85,8 +90,8 @@ def main(ids):
             print(f"x0 {sid} {run} {cfg} CD {p['cd']:.4f} NC {p['nc']:.3f} F1 {p['f1']:.3f} PSNR {im['psnr']:.2f} SSIM {im['ssim']:.4f} "
                   f"LPIPS {im['lpips']:.4f} DINO {im.get('dino_i'):.4f} CLIP {im.get('clip_t'):.4f} | E2a정의 CLIP6 {im.get('clip_t_front6'):.4f} "
                   f"DINO16 {im.get('dino_i_ref16'):.4f}", flush=True)
-            (OUT / "x0.json").write_text(json.dumps(summary, indent=1))
-            (OUT / "x0_runs.json").write_text(json.dumps(runs_sum, indent=1))
+            (OUT / f"x0{suf}.json").write_text(json.dumps(summary, indent=1))
+            (OUT / f"x0_runs{suf}.json").write_text(json.dumps(runs_sum, indent=1))
 
 
 if __name__ == "__main__":

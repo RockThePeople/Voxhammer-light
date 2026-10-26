@@ -26,7 +26,9 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "third_party" / "ai-ar-v3"), str(ROOT / "third_party" / "ai-ar-v3" / "contract" / "python")]
 from tools.paper.x3 import ASSET_NAMES, MASKS, OUT, ROUNDS, gen, round_info, start_r0, transform_glb  # noqa: E402
 
-SC = OUT / "score"
+# X3_STITCHED=1: P1·P2 메시를 봉합본($RUNS_DIR/paper/x3/stitched/, chief 21:4x (d))으로 바꿔 채점하고 score_stitched/ 에 쓴다(P0 는 그대로라 건너뛴다).
+STITCHED = os.environ.get("X3_STITCHED", "0") == "1"
+SC = OUT / ("score_stitched" if STITCHED else "score")
 CACHE = OUT / "_cache"
 
 
@@ -49,6 +51,8 @@ def mesh_spec(path, asset, k):
             transform_glb(d / "output.glb", np.linalg.inv(C), v0)
         return {"mesh": str(v0), "kind": "v0"}
     base = OUT / ("p1" if k == 0 else path) / asset / f"r{k}"
+    if STITCHED and k > 0:
+        base = OUT / "stitched" / path / asset / f"r{k}"
     return {"mesh": str(base / "output.glb"), "kind": "raw", "vertex_color": True}
 
 
@@ -113,7 +117,7 @@ def main(names):
             start_r0(a, OUT / pth / a)
         jobs = [("p1", 0, "common", [])]
         for k in range(1, ROUNDS + 1):
-            for path in ("p0", "p1", "p2"):
+            for path in (("p1", "p2") if STITCHED else ("p0", "p1", "p2")):
                 if not (OUT / path / a / f"r{k}" / "round.json").exists():
                     continue
                 jobs += [(path, k, "own", None), (path, k, "prev", None)]
