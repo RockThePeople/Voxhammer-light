@@ -2,7 +2,7 @@
 
 > 사진을 어떤 기준으로 비교해 보는지는 [README.md](README.md)(안내서)에 있다.
 
-생성: `tools/paper/capture/{capture,bpy_render,build,finish}.py`, 저장소 `item/X-paper-a5000` 커밋 `5b42eeb0c9301bf3b99025a17227d44644efcae3`(캡처 도구). 새 편집·새 채점 없음 — 보고서 `0531459` 기준 기존 출력만 다시 찍었다.
+생성: `tools/paper/capture/{capture,bpy_render,build,finish}.py`, 저장소 `item/X-paper-a5000` 커밋 `5b42eeb0c9301bf3b99025a17227d44644efcae3`. 새 편집·새 채점 없음 — 보고서 `0531459` 기준 기존 출력만 다시 찍었다.
 
 ## 렌더 설정
 
@@ -16,7 +16,7 @@
 ## 카메라·좌표
 
 - 카메라: Bench/포크 정의 — 반지름 1.8, 원점 주시, 렌즈 35 mm·센서 32 mm. az = Bench 방위(Blender 방위 = az − 90°). 정면은 원본 r0 의 고도 10° 8방향 렌더에서 정했다(cameras.json).
-- 캐릭터 = 정면(az = 정면, 고도 10°), 사물 = 3/4 정면(az = 정면 + 45°, 고도 25°). 모든 경로·회차·실행에 같은 카메라.
+- 캐릭터 = 정면(az = 정면, 고도 10°), 사물 = 3/4 정면(az = 정면 + 45°, 고도 25°). 예외: 오두막은 정면 − 45°(az 45) — 왼쪽 벽 창(r2)·굴뚝(r5)·정면 창 아래 꽃상자(r3)가 한 시점에 보이도록(사용자 10-27; 정면 + 45° 에서는 r2 창이 옆벽에 가려졌다). 모든 경로·회차·실행에 같은 카메라.
 - 좌표: 자산마다 v0 메시 bbox 로 정한 N 좌표(중심 원점, 최대 변 1; `tools/paper_metrics.py` AssetFrame) 하나에 모든 결과를 옮긴다. raw(R4·editcore) → v0: (p − raw_c)·raw_s(트랙 A·X3 gen.json, 트랙 B·X2-B 항등) → N: (p − t0_c)·t0_s.
 - P0: X3 = round.json 의 누적 변환 C_k(v0 → 그 회차 입력 좌표)의 역행렬로 v0 에 되돌림(output_v0.glb). X2-A·X2-B = 입력에 건 정규화 T(prep.json) 좌표 = N(같은 v0 bbox 변환). X4 = 채점과 같이 N 으로 본다(회차마다의 재정규화 표류는 되돌리지 않음 — 실루엣 확인 참조).
 
@@ -26,7 +26,7 @@
 | snowman | 캐릭터 | 180 | 180 | 10 | 얼굴·당근 코 |
 | chair | 사물 | 0 | 45 | 25 | 좌석 정면 |
 | jeep | 사물 | 0 | 45 | 25 | 그릴 |
-| cottage | 사물 | 90 | 135 | 25 | 현관문 |
+| cottage | 사물 | 90 | 45 | 25 | 현관문 |
 | adventurer | 캐릭터 | 45 | 45 | 10 | 얼굴 정면(X3 마스크 작업의 포크 시점 1) |
 | B1 | 사물 | 0 | 45 | 25 | 바구니 앞면 |
 | B2 | 사물 | 0 | 45 | 25 | 디저트 앞면 |
@@ -110,7 +110,7 @@
 | `x0/<시나리오>/{original, base25/r1, c15_glb/r1, c15_cbin/r1}/` | X0 r1(c15_cbin = R4 + 봉합, 채택본) | 3절, 요약 S4 |
 | `x2a/<시나리오>/{original, p0/r1–r2, p1_glb/r1–r3, p1_cbin/r1–r3}/`, `cond/` | X2-A, 동결 조건 이미지 | 5절, 요약 S6 |
 | `x2b/<건>/{original, p0, p1}/`, `cond/` | X2-B, 사용한 조건 이미지(데이터셋 2D 또는 FLUX) | 요약 S7 |
-| `eval/` | 사람 평가 x3-eval: 평가자가 본 익명 칸 이미지(items/, 칸 A·B·C 그대로), 페이지 캡처(x3_eval_page.png — 평가 뒤에 찍어 저장된 선택이 파란 버튼으로 보인다), items.json, choices.json, blind_key.json(칸 ↔ 경로) | 요약 S3 |
+| `eval/` | 사람 평가 x3-eval: 평가자가 본 익명 칸 이미지(items/), 페이지 캡처, items.json, choices.json, blind_key.json(칸 ↔ 경로) | 요약 S3 |
 | `sheets/` | 경로 × 회차 시트(라벨), 실루엣 확인(빨강 = 원본만, 파랑 = 결과만, 회색 = 겹침), 시점 확인 | — |
 | `img/` | 보고서 그림 원본 해상도 | 각 절 |
 | `tables/` | 요약 S1–S7 CSV(S1 빈 자리 열 제거), `raw/` 원값 JSON(경로는 $RUNS_DIR 등으로 바꿈) | 요약 |
@@ -158,7 +158,7 @@
 
 판정: 원본 메시를 그 카메라로 256² 레이캐스팅해 마스크(∪1셀) 셀에 닿는 화소가 50 미만.
 
-- x3/cottage/r2: 보이는 화소 0
+- 없음
 
 ## 모델 원본(메시 sha256)
 
