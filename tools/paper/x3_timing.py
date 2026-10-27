@@ -342,6 +342,51 @@ def tables(out_md):
     print("tables", out_md)
 
 
+def per_path(out_dir):
+    """자산 × 회차 × 경로마다 표 하나(45개) + 자산별 최초 생성 표(3개): CSV 각각 + 모두 담은 README.md."""
+    import csv
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    PN = {"p0": "P0(원저자)", "p1": "P1(제안)", "p2": "P2(P1 + 재등록)"}
+    L = ["# X3 단계별 소요 시간 — 자산 × 회차 × 경로", "",
+         "단위 초. 굵은 줄 = 단계(합 = 회차 합계), `└` 줄 = 그 단계 안 세부. 출처·방법·한계는 [../10_X3_회차별_소요시간.md](../10_X3_회차별_소요시간.md) 앞부분.",
+         "CSV 는 같은 폴더 `<자산>_r<회차>_<경로>.csv`(열: 단계, 세부, 초). 최초 생성은 `<자산>_r0_gen.csv`.", ""]
+    for a, nm in NAMES.items():
+        L += [f"## {nm}({a})", ""]
+        rows, g = gen_rows(a)
+        with open(out_dir / f"{a}_r0_gen.csv", "w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["단계", "세부", "초"])
+            for n, v in rows:
+                w.writerow([n, "", f"{v:.1f}"])
+            w.writerow(["합계", "", f"{sum(v for _, v in rows):.1f}"])
+        L += [f"### {nm} 최초 생성(TRELLIS image-large, A5000, seed {g['seed']})", "", "| 단계 | 초 |", "|---|---:|"]
+        L += [f"| {n} | {fmt(v)} |" for n, v in rows] + [f"| **합계** | **{fmt(sum(v for _, v in rows))}** |", ""]
+        for k in range(1, 6):
+            for p in ("p0", "p1", "p2"):
+                rows, total, r, notes, t0 = round_rows(p, a, k)
+                with open(out_dir / f"{a}_r{k}_{p}.csv", "w", newline="") as f:
+                    w = csv.writer(f)
+                    w.writerow(["단계", "세부", "초"])
+                    st = ""
+                    for n, v, top in rows:
+                        if top:
+                            st = n
+                            w.writerow([n, "", f"{v:.1f}"])
+                        else:
+                            w.writerow([st, n.replace("　└ ", ""), f"{v:.1f}"])
+                    w.writerow(["회차 합계", "", f"{total:.1f}"])
+                src = "재계측(10-27)" if r.get("remeasured") else "X3 실행(10-26)"
+                L += [f"### {nm} {k}회차 · {PN[p]}", "", f"프롬프트: \"{r['prompt']}\" · 출처: {src} · 시작 {t0:%m-%d %H:%M:%S}", "",
+                      "| 단계 | 초 |", "|---|---:|"]
+                for n, v, top in rows:
+                    L.append(f"| **{n}** | **{fmt(v)}** |" if top else f"| {n} | {fmt(v)} |")
+                L.append(f"| **회차 합계** | **{fmt(total)}** |")
+                L += [f"\n- {t}" for t in notes] + [""]
+    (out_dir / "README.md").write_text("\n".join(L) + "\n")
+    print("per_path", len(list(out_dir.glob("*.csv"))), "csv")
+
+
 def _rank(n):
     m = re.match(r"\s*(\d)\.", n)
     if m:
@@ -350,4 +395,4 @@ def _rank(n):
 
 
 if __name__ == "__main__":
-    {"remeasure": remeasure, "tables": lambda: tables(sys.argv[2])}[sys.argv[1]]()
+    {"remeasure": remeasure, "tables": lambda: tables(sys.argv[2]), "per_path": lambda: per_path(sys.argv[2])}[sys.argv[1]]()
