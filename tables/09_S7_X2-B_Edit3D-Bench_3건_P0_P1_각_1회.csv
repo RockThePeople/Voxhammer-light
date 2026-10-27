@@ -1,0 +1,7 @@
+건,모델 · 프롬프트,경로,CD ↓,F1 ↑,PSNR(M) ↑,SSIM(M) ↑,LPIPS(M) ↓,DINO-I ↑,CLIP-T ↑
+X2B-1,3D_Dollhouse_Happy_Broth · A dog.,P0,0.0020,1.000,21.76,0.8244,0.0633,0.667,0.240
+X2B-1,3D_Dollhouse_Happy_Broth · A dog.,P1,0.0037,0.948,21.66,0.8214,0.0721,0.670,0.247
+X2B-2,3D_Dollhouse_Lamp · A lamp with a carrot pillar.,P0,0.0014,1.000,24.60,0.8439,0.0637,0.740,0.299
+X2B-2,3D_Dollhouse_Lamp · A lamp with a carrot pillar.,P1,0.0034,0.911,23.89,0.8209,0.0711,0.736,0.305
+X2B-3,00200996b8f34f55a2dd2f44 · A man with a fox on his shoulder.,P0,0.0027,0.996,21.86,0.7326,0.0842,0.738,0.241
+X2B-3,00200996b8f34f55a2dd2f44 · A man with a fox on his shoulder.,P1,0.0043,0.931,22.08,0.7374,0.0975,0.744,0.260

@@ -1,0 +1,87 @@
+[
+ {
+  "file": "raw/x3_score.json",
+  "source": "$RUNS_DIR/paper/x3/score/x3_score.json",
+  "source_sha256": "7392c5d30949822e182c48bd62e552dfb0c922241ab24154c366b52dfaaba448"
+ },
+ {
+  "file": "raw/x3_score_stitched.json",
+  "source": "$RUNS_DIR/paper/x3/score_stitched/x3_score.json",
+  "source_sha256": "568464285493afe64c7eebf05bf28c877028ae32584e38bc35e69fb4f6a8be08"
+ },
+ {
+  "file": "raw/x3_surface_iou.json",
+  "source": "$RUNS_DIR/paper/x3/score/surface_iou.json",
+  "source_sha256": "659ccceb1a75432695b85057b2a2410f041851cfd570df14c3ae28f9bac420fe"
+ },
+ {
+  "file": "raw/c4_jeep_color.json",
+  "source": "$RUNS_DIR/paper/x3/c4/jeep_color.json",
+  "source_sha256": "296d86f3a3a66f6ad4247d1eb8b046055466e861ba7cfc320b1fc632a4a53fe9"
+ },
+ {
+  "file": "raw/c4_cottage_color.json",
+  "source": "$RUNS_DIR/paper/x3/c4/cottage_color.json",
+  "source_sha256": "deb2d15d277988c390e5b2e5f3949ed7119e007cca302d538d11d00ac820d7c6"
+ },
+ {
+  "file": "raw/c4_adventurer_color.json",
+  "source": "$RUNS_DIR/paper/x3/c4/adventurer_color.json",
+  "source_sha256": "30ad5102764ef761da69a6666f447d5377cf119be5399affb593293499f2c791"
+ },
+ {
+  "file": "raw/c4_jeep_seam_variants.json",
+  "source": "$RUNS_DIR/paper/x3/c4/jeep_seam_variants.json",
+  "source_sha256": "45a906d1e3fb7c01ef50449a76f78e83d481699f2c87f6df4943a99389626727"
+ },
+ {
+  "file": "raw/c4_jeep_stitch_darkpx.json",
+  "source": "$RUNS_DIR/paper/x3/c4/jeep_stitch_darkpx.json",
+  "source_sha256": "ef4b6a9c9dd7e31deaa67f0ed926b17b0445984e258053aa7417d7c69fcaaf25"
+ },
+ {
+  "file": "raw/x0_r1.json",
+  "source": "$RUNS_DIR/paper/x0/x0.json",
+  "source_sha256": "bc6978850eda1072dfa3820a89000e120167f2290961b7a411e8ad3cc58d2ec7"
+ },
+ {
+  "file": "raw/x0_runs.json",
+  "source": "$RUNS_DIR/paper/x0/x0_runs.json",
+  "source_sha256": "61db793be9dded61de0e8ee334edcfd7bebb6c1ad598bf5188db21b4438e2163"
+ },
+ {
+  "file": "raw/x0_runs_stitched.json",
+  "source": "$RUNS_DIR/paper/x0/x0_runs_st.json",
+  "source_sha256": "ec530675ad3f36c3e421a760433660b9e0c463e3bc4b09da1718aec966862456"
+ },
+ {
+  "file": "raw/x4_score.json",
+  "source": "$RUNS_DIR/paper/x4/score/x4_score.json",
+  "source_sha256": "423b13c167c0d47a75000b437cfb3f8ffbd4882d42cd03cbee518bc77b368162"
+ },
+ {
+  "file": "raw/x2a_p0.json",
+  "source": "$RUNS_DIR/paper/x2a/score/x2a_p0.json",
+  "source_sha256": "015a004218d62d009a499685aac5365fd2b61617519a3279b518e03d18f5f2ed"
+ },
+ {
+  "file": "raw/x2a_noninferiority.json",
+  "source": "$RUNS_DIR/paper/x2a/score/tost.json",
+  "source_sha256": "6ec363f853ab33b042f8421dd41681cb427e575814f6b1ec2e1eb91964c4b3f0"
+ },
+ {
+  "file": "raw/x2b.json",
+  "source": "$RUNS_DIR/paper/x2b/score/x2b.json",
+  "source_sha256": "11998b9c3e33fa5a36a5d46774e88d0e04749055b888b904690c33374baa7479"
+ },
+ {
+  "file": "raw/x3_eval_choices.json",
+  "source": "$RUNS_DIR/paper/x3/eval/choices.json",
+  "source_sha256": "3c34f201e57039b0e2cfe30fbee9eae511580eb782b70e0ef99ba18825f8af25"
+ },
+ {
+  "file": "raw/x3_eval_blind_key.json",
+  "source": "$RUNS_DIR/paper/x3/blind_key.json",
+  "source_sha256": "049ea863a2977b09155df25ed55d285efb72c59c3e672e57e6700dab0d2bd066"
+ }
+]

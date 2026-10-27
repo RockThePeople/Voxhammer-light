@@ -1,0 +1,80 @@
+{
+ "note": "x3-eval \uce78 \u2194 \uacbd\ub85c. \ud3c9\uac00\uac00 \ub05d\ub0a0 \ub54c\uae4c\uc9c0 \ubcf4\uace0\uc11c\u00b7\ubdf0\uc5b4\uc5d0 \ub178\ucd9c\ud558\uc9c0 \uc54a\ub294\ub2e4.",
+ "key": {
+  "jeep-r1": {
+   "A": "p1",
+   "B": "p0",
+   "C": "p2"
+  },
+  "jeep-r2": {
+   "A": "p1",
+   "B": "p0",
+   "C": "p2"
+  },
+  "jeep-r3": {
+   "A": "p0",
+   "B": "p2",
+   "C": "p1"
+  },
+  "jeep-r4": {
+   "A": "p0",
+   "B": "p1",
+   "C": "p2"
+  },
+  "jeep-r5": {
+   "A": "p1",
+   "B": "p0",
+   "C": "p2"
+  },
+  "cottage-r1": {
+   "A": "p2",
+   "B": "p1",
+   "C": "p0"
+  },
+  "cottage-r2": {
+   "A": "p1",
+   "B": "p0",
+   "C": "p2"
+  },
+  "cottage-r3": {
+   "A": "p0",
+   "B": "p2",
+   "C": "p1"
+  },
+  "cottage-r4": {
+   "A": "p1",
+   "B": "p2",
+   "C": "p0"
+  },
+  "cottage-r5": {
+   "A": "p0",
+   "B": "p2",
+   "C": "p1"
+  },
+  "adventurer-r1": {
+   "A": "p0",
+   "B": "p1",
+   "C": "p2"
+  },
+  "adventurer-r2": {
+   "A": "p0",
+   "B": "p1",
+   "C": "p2"
+  },
+  "adventurer-r3": {
+   "A": "p0",
+   "B": "p2",
+   "C": "p1"
+  },
+  "adventurer-r4": {
+   "A": "p1",
+   "B": "p2",
+   "C": "p0"
+  },
+  "adventurer-r5": {
+   "A": "p1",
+   "B": "p0",
+   "C": "p2"
+  }
+ }
+}

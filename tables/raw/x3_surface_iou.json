@@ -1,0 +1,281 @@
+{
+ "jeep": {
+  "S_cells": 18267,
+  "p0_r1": {
+   "iou_surf": 0.9208446776014344,
+   "surf_cells": 15251,
+   "parent_surf": 14494,
+   "child_surf": 14432
+  },
+  "p0_r2": {
+   "iou_surf": 0.8802930967990744,
+   "surf_cells": 13175,
+   "parent_surf": 12568,
+   "child_surf": 11810
+  },
+  "p0_r3": {
+   "iou_surf": 0.8416988416988417,
+   "surf_cells": 11820,
+   "parent_surf": 11245,
+   "child_surf": 10220
+  },
+  "p0_r4": {
+   "iou_surf": 0.8140043763676149,
+   "surf_cells": 10635,
+   "parent_surf": 10127,
+   "child_surf": 8940
+  },
+  "p0_r5": {
+   "iou_surf": 0.8203799654576857,
+   "surf_cells": 10540,
+   "parent_surf": 10034,
+   "child_surf": 8938
+  },
+  "p1_r1": {
+   "iou_surf": 0.9977970535591354,
+   "surf_cells": 15251,
+   "parent_surf": 14494,
+   "child_surf": 14526
+  },
+  "p1_r2": {
+   "iou_surf": 0.9965902783284434,
+   "surf_cells": 13175,
+   "parent_surf": 12568,
+   "child_surf": 12611
+  },
+  "p1_r3": {
+   "iou_surf": 0.9956614131397202,
+   "surf_cells": 11820,
+   "parent_surf": 11245,
+   "child_surf": 11294
+  },
+  "p1_r4": {
+   "iou_surf": 0.9950869607939471,
+   "surf_cells": 10635,
+   "parent_surf": 10127,
+   "child_surf": 10177
+  },
+  "p1_r5": {
+   "iou_surf": 0.9946471054718478,
+   "surf_cells": 10540,
+   "parent_surf": 10034,
+   "child_surf": 10088
+  },
+  "p2_r1": {
+   "iou_surf": 0.9508110593025547,
+   "surf_cells": 15251,
+   "parent_surf": 14494,
+   "child_surf": 15211
+  },
+  "p2_r2": {
+   "iou_surf": 0.9499087868653086,
+   "surf_cells": 13175,
+   "parent_surf": 12568,
+   "child_surf": 13085
+  },
+  "p2_r3": {
+   "iou_surf": 0.9396814639105388,
+   "surf_cells": 11820,
+   "parent_surf": 11245,
+   "child_surf": 11651
+  },
+  "p2_r4": {
+   "iou_surf": 0.9404123129059587,
+   "surf_cells": 10635,
+   "parent_surf": 10127,
+   "child_surf": 10486
+  },
+  "p2_r5": {
+   "iou_surf": 0.9406232186965608,
+   "surf_cells": 10540,
+   "parent_surf": 10034,
+   "child_surf": 10393
+  }
+ },
+ "cottage": {
+  "S_cells": 23679,
+  "p0_r1": {
+   "iou_surf": 0.950228269626712,
+   "surf_cells": 22376,
+   "parent_surf": 22009,
+   "child_surf": 21563
+  },
+  "p0_r2": {
+   "iou_surf": 0.9336281082109067,
+   "surf_cells": 21076,
+   "parent_surf": 20766,
+   "child_surf": 19904
+  },
+  "p0_r3": {
+   "iou_surf": 0.9267372696938924,
+   "surf_cells": 20714,
+   "parent_surf": 20426,
+   "child_surf": 19417
+  },
+  "p0_r4": {
+   "iou_surf": 0.9204551201011378,
+   "surf_cells": 19809,
+   "parent_surf": 19529,
+   "child_surf": 18448
+  },
+  "p0_r5": {
+   "iou_surf": 0.9165503605489649,
+   "surf_cells": 17228,
+   "parent_surf": 16968,
+   "child_surf": 15989
+  },
+  "p1_r1": {
+   "iou_surf": 0.999318924809299,
+   "surf_cells": 22376,
+   "parent_surf": 22009,
+   "child_surf": 22024
+  },
+  "p1_r2": {
+   "iou_surf": 0.9989897532111416,
+   "surf_cells": 21076,
+   "parent_surf": 20766,
+   "child_surf": 20787
+  },
+  "p1_r3": {
+   "iou_surf": 0.9987775658891985,
+   "surf_cells": 20714,
+   "parent_surf": 20426,
+   "child_surf": 20451
+  },
+  "p1_r4": {
+   "iou_surf": 0.9985682875696682,
+   "surf_cells": 19809,
+   "parent_surf": 19529,
+   "child_surf": 19557
+  },
+  "p1_r5": {
+   "iou_surf": 0.9987639060568603,
+   "surf_cells": 17228,
+   "parent_surf": 16968,
+   "child_surf": 16989
+  },
+  "p2_r1": {
+   "iou_surf": 0.9914128174997741,
+   "surf_cells": 22376,
+   "parent_surf": 22009,
+   "child_surf": 22053
+  },
+  "p2_r2": {
+   "iou_surf": 0.9833844091170274,
+   "surf_cells": 21076,
+   "parent_surf": 20766,
+   "child_surf": 20655
+  },
+  "p2_r3": {
+   "iou_surf": 0.9822341202238988,
+   "surf_cells": 20714,
+   "parent_surf": 20426,
+   "child_surf": 20299
+  },
+  "p2_r4": {
+   "iou_surf": 0.9782575487550282,
+   "surf_cells": 19809,
+   "parent_surf": 19529,
+   "child_surf": 19322
+  },
+  "p2_r5": {
+   "iou_surf": 0.9781372721411407,
+   "surf_cells": 17228,
+   "parent_surf": 16968,
+   "child_surf": 16781
+  }
+ },
+ "adventurer": {
+  "S_cells": 15191,
+  "p0_r1": {
+   "iou_surf": 0.9154940233015585,
+   "surf_cells": 13261,
+   "parent_surf": 13096,
+   "child_surf": 12223
+  },
+  "p0_r2": {
+   "iou_surf": 0.9012528275622064,
+   "surf_cells": 11538,
+   "parent_surf": 11411,
+   "child_surf": 10442
+  },
+  "p0_r3": {
+   "iou_surf": 0.87467580585402,
+   "surf_cells": 10835,
+   "parent_surf": 10719,
+   "child_surf": 9520
+  },
+  "p0_r4": {
+   "iou_surf": 0.8735836480782049,
+   "surf_cells": 9033,
+   "parent_surf": 8934,
+   "child_surf": 7932
+  },
+  "p0_r5": {
+   "iou_surf": 0.8617874736101337,
+   "surf_cells": 7134,
+   "parent_surf": 7046,
+   "child_surf": 6182
+  },
+  "p1_r1": {
+   "iou_surf": 0.9990083148981616,
+   "surf_cells": 13261,
+   "parent_surf": 13096,
+   "child_surf": 13109
+  },
+  "p1_r2": {
+   "iou_surf": 0.9994744678987475,
+   "surf_cells": 11538,
+   "parent_surf": 11411,
+   "child_surf": 11417
+  },
+  "p1_r3": {
+   "iou_surf": 0.9995337560611712,
+   "surf_cells": 10835,
+   "parent_surf": 10719,
+   "child_surf": 10724
+  },
+  "p1_r4": {
+   "iou_surf": 0.9994406533169258,
+   "surf_cells": 9033,
+   "parent_surf": 8934,
+   "child_surf": 8939
+  },
+  "p1_r5": {
+   "iou_surf": 0.9992908807261381,
+   "surf_cells": 7134,
+   "parent_surf": 7046,
+   "child_surf": 7051
+  },
+  "p2_r1": {
+   "iou_surf": 0.9887436730376974,
+   "surf_cells": 13261,
+   "parent_surf": 13096,
+   "child_surf": 13229
+  },
+  "p2_r2": {
+   "iou_surf": 0.9894992623448755,
+   "surf_cells": 11538,
+   "parent_surf": 11411,
+   "child_surf": 11514
+  },
+  "p2_r3": {
+   "iou_surf": 0.9887308331793829,
+   "surf_cells": 10835,
+   "parent_surf": 10719,
+   "child_surf": 10811
+  },
+  "p2_r4": {
+   "iou_surf": 0.9889196675900277,
+   "surf_cells": 9033,
+   "parent_surf": 8934,
+   "child_surf": 9016
+  },
+  "p2_r5": {
+   "iou_surf": 0.9876525887470183,
+   "surf_cells": 7134,
+   "parent_surf": 7046,
+   "child_surf": 7120
+  }
+ }
+}

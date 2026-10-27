@@ -1,0 +1,347 @@
+[
+ {
+  "id": "jeep-r1",
+  "asset": "jeep",
+  "round": 1,
+  "prompt": "a heavy chrome steel bull bar front bumper on the jeep",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "jeep-r1/A_edit.png",
+    "v34": "jeep-r1/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "jeep-r1/B_edit.png",
+    "v34": "jeep-r1/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "jeep-r1/C_edit.png",
+    "v34": "jeep-r1/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "jeep-r2",
+  "asset": "jeep",
+  "round": 2,
+  "prompt": "the jeep hood painted bright red with two white racing stripes",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "jeep-r2/A_edit.png",
+    "v34": "jeep-r2/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "jeep-r2/B_edit.png",
+    "v34": "jeep-r2/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "jeep-r2/C_edit.png",
+    "v34": "jeep-r2/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "jeep-r3",
+  "asset": "jeep",
+  "round": 3,
+  "prompt": "a rear rack holding two red jerry cans on the back of the jeep",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "jeep-r3/A_edit.png",
+    "v34": "jeep-r3/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "jeep-r3/B_edit.png",
+    "v34": "jeep-r3/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "jeep-r3/C_edit.png",
+    "v34": "jeep-r3/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "jeep-r4",
+  "asset": "jeep",
+  "round": 4,
+  "prompt": "a black roof rack with a brown leather travel bag strapped on top of the jeep roof",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "jeep-r4/A_edit.png",
+    "v34": "jeep-r4/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "jeep-r4/B_edit.png",
+    "v34": "jeep-r4/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "jeep-r4/C_edit.png",
+    "v34": "jeep-r4/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "jeep-r5",
+  "asset": "jeep",
+  "round": 5,
+  "prompt": "the smooth right front pillar of the jeep with no snorkel, olive green paint",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "jeep-r5/A_edit.png",
+    "v34": "jeep-r5/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "jeep-r5/B_edit.png",
+    "v34": "jeep-r5/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "jeep-r5/C_edit.png",
+    "v34": "jeep-r5/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "cottage-r1",
+  "asset": "cottage",
+  "round": 1,
+  "prompt": "an arched red wooden front door with iron hinges",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "cottage-r1/A_edit.png",
+    "v34": "cottage-r1/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "cottage-r1/B_edit.png",
+    "v34": "cottage-r1/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "cottage-r1/C_edit.png",
+    "v34": "cottage-r1/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "cottage-r2",
+  "asset": "cottage",
+  "round": 2,
+  "prompt": "a round stained glass window with blue and yellow panes",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "cottage-r2/A_edit.png",
+    "v34": "cottage-r2/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "cottage-r2/B_edit.png",
+    "v34": "cottage-r2/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "cottage-r2/C_edit.png",
+    "v34": "cottage-r2/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "cottage-r3",
+  "asset": "cottage",
+  "round": 3,
+  "prompt": "a wooden flower box with red flowers under the window",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "cottage-r3/A_edit.png",
+    "v34": "cottage-r3/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "cottage-r3/B_edit.png",
+    "v34": "cottage-r3/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "cottage-r3/C_edit.png",
+    "v34": "cottage-r3/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "cottage-r4",
+  "asset": "cottage",
+  "round": 4,
+  "prompt": "a white picket fence railing around the porch",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "cottage-r4/A_edit.png",
+    "v34": "cottage-r4/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "cottage-r4/B_edit.png",
+    "v34": "cottage-r4/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "cottage-r4/C_edit.png",
+    "v34": "cottage-r4/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "cottage-r5",
+  "asset": "cottage",
+  "round": 5,
+  "prompt": "a plain brown shingled roof with no chimney",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "cottage-r5/A_edit.png",
+    "v34": "cottage-r5/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "cottage-r5/B_edit.png",
+    "v34": "cottage-r5/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "cottage-r5/C_edit.png",
+    "v34": "cottage-r5/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "adventurer-r1",
+  "asset": "adventurer",
+  "round": 1,
+  "prompt": "a tall blue pointed wizard hat with yellow stars",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "adventurer-r1/A_edit.png",
+    "v34": "adventurer-r1/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "adventurer-r1/B_edit.png",
+    "v34": "adventurer-r1/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "adventurer-r1/C_edit.png",
+    "v34": "adventurer-r1/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "adventurer-r2",
+  "asset": "adventurer",
+  "round": 2,
+  "prompt": "a glowing brass lantern held in the right hand",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "adventurer-r2/A_edit.png",
+    "v34": "adventurer-r2/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "adventurer-r2/B_edit.png",
+    "v34": "adventurer-r2/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "adventurer-r2/C_edit.png",
+    "v34": "adventurer-r2/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "adventurer-r3",
+  "asset": "adventurer",
+  "round": 3,
+  "prompt": "a small blue bird perched on the right shoulder",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "adventurer-r3/A_edit.png",
+    "v34": "adventurer-r3/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "adventurer-r3/B_edit.png",
+    "v34": "adventurer-r3/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "adventurer-r3/C_edit.png",
+    "v34": "adventurer-r3/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "adventurer-r4",
+  "asset": "adventurer",
+  "round": 4,
+  "prompt": "red sneakers with white soles",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "adventurer-r4/A_edit.png",
+    "v34": "adventurer-r4/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "adventurer-r4/B_edit.png",
+    "v34": "adventurer-r4/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "adventurer-r4/C_edit.png",
+    "v34": "adventurer-r4/C_34.png"
+   }
+  ]
+ },
+ {
+  "id": "adventurer-r5",
+  "asset": "adventurer",
+  "round": 5,
+  "prompt": "the bare left arm in a green tunic sleeve, no shield",
+  "slots": [
+   {
+    "slot": "A",
+    "edit": "adventurer-r5/A_edit.png",
+    "v34": "adventurer-r5/A_34.png"
+   },
+   {
+    "slot": "B",
+    "edit": "adventurer-r5/B_edit.png",
+    "v34": "adventurer-r5/B_34.png"
+   },
+   {
+    "slot": "C",
+    "edit": "adventurer-r5/C_edit.png",
+    "v34": "adventurer-r5/C_34.png"
+   }
+  ]
+ }
+]
