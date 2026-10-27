@@ -205,7 +205,7 @@ def manifest(out, info):
           "| 폴더 | 내용 | 보고서 |", "|---|---|---|",
           "| `x3/<자산>/{original/r0, p0, p1, p2}/r<k>/` | X3 연속 5회 편집(P1·P2 = 봉합본), `cond/r<k>/<경로>/` 조건 이미지·prompt.txt | 4절, 요약 S1·S2 |",
           "| `stitch/<자산>/{p1,p2}_prestitch/`, `stitch/jeep/{p1_skirt, p1_stitch_skirt, p1_fulldecode}/` | 봉합 전·치마 벽 시험·통째 디코딩 | 10·10-1절 |",
-          "| `x4/<자산>/{p0/r0–r5, p1/r1-5}/` | 무편집 재등록(P1 r1–r5 는 같은 메시라 1회) | 2절, 요약 S5 |",
+          "| `x4/<자산>/{p0/r0–r5, p1/r1-5}/` | 무편집 재등록(P1 r1–r5 는 같은 SLat 재디코딩이라 1회) | 2절, 요약 S5 |",
           "| `x0/<시나리오>/{original, base25/r1, c15_glb/r1, c15_cbin/r1}/` | X0 r1(c15_cbin = R4 + 봉합, 채택본) | 3절, 요약 S4 |",
           "| `x2a/<시나리오>/{original, p0/r1–r2, p1_glb/r1–r3, p1_cbin/r1–r3}/`, `cond/` | X2-A, 동결 조건 이미지 | 5절, 요약 S6 |",
           "| `x2b/<건>/{original, p0, p1}/`, `cond/` | X2-B, 사용한 조건 이미지(데이터셋 2D 또는 FLUX) | 요약 S7 |",

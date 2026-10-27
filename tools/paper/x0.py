@@ -20,6 +20,13 @@ ASSETS = Path(os.environ["ASSETS_DIR"])
 RUNS = Path(os.environ["RUNS_DIR"])
 OUT = RUNS / "paper" / "x0"
 E2A_DAY = "2026-10-25"
+# 논문 11건판(사용자 10-27 17:27: A-M1·A-M2·A-C1 제외). VHL_PAPER_CASES=11 또는 쉼표 목록이면 scenarios() 를 그 건으로 줄인다(재집계 전용).
+CASES11 = ("A-S1", "A-S2", "A-C2", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8")
+
+
+def case_filter():
+    v = os.environ.get("VHL_PAPER_CASES", "")
+    return None if not v else set(CASES11 if v == "11" else v.split(","))
 
 
 def scenarios():
@@ -37,7 +44,8 @@ def scenarios():
         out[bid] = {"name": f"track_b-{bid}", "v0": ASSETS / "Edit3D-Bench" / "data" / s["dataset"] / s["object"] / "source_model" / "model.glb",
                     "slat": b / "slat.safetensors", "raw_c": [0, 0, 0], "raw_s": 1.0, "mask": b / "mask.json",
                     "cond": b / "cond", "prompt": s["prompt"], "view": s["edit_view"]}
-    return out
+    keep = case_filter()
+    return out if keep is None else {k: v for k, v in out.items() if k in keep}
 
 
 def configs(sid, s, run="r1"):

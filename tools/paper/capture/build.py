@@ -248,7 +248,7 @@ def x4(out):
             add(pl, a, P / "x4" / "p0" / a / f"r{k}" / "output.glb", "n", False, base / a / "p0" / f"r{k}", "P0 to_glb(N 좌표, x4_score 와 같음)", "x4")
         hs = [sha(P / "x4" / "p1" / a / f"r{k}" / "output.glb") for k in range(1, 6)]
         shas[a] = {"p1_output_sha256": hs, "identical": len(set(hs)) == 1}
-        add(pl, a, P / "x4" / "p1" / a / "r1" / "output.glb", "raw", True, base / a / "p1" / "r1-5", "P1 view.glb(r1–r5 같은 메시)", "x4")
+        add(pl, a, P / "x4" / "p1" / a / "r1" / "output.glb", "raw", True, base / a / "p1" / "r1-5", "P1 view.glb(r1–r5 같은 SLat 재디코딩, 1회 촬영)", "x4")
     pl.run("x4")
     rows = list(shas)
     for m in ("shaded", "albedo"):
