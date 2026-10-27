@@ -1,5 +1,7 @@
 # paper-results — 논문 캡처·표 (X-paper, a5000)
 
+> 사진을 어떤 기준으로 비교해 보는지는 [README.md](README.md)(안내서)에 있다.
+
 생성: `tools/paper/capture/{capture,bpy_render,build,finish}.py`, 저장소 `item/X-paper-a5000` 커밋 `5b42eeb0c9301bf3b99025a17227d44644efcae3`(캡처 도구). 새 편집·새 채점 없음 — 보고서 `0531459` 기준 기존 출력만 다시 찍었다.
 
 ## 렌더 설정
