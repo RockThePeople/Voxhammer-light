@@ -118,8 +118,7 @@ def tost():
                        "p0_range_mean": float(np.mean(rng0))}
         out[p1cfg] = rows
         print(p1cfg, {m: (round(v["d_mean"], 4), v["noninferior"], round(v["p_superiority"], 4)) for m, v in rows.items()}, flush=True)
-    tag = os.environ.get("VHL_PAPER_TAG", "")             # 부분집합 재집계(11건 등)는 tost_<tag>.json, 14건 원본은 그대로
-    (X2A / "score" / (f"tost_{tag}.json" if tag else "tost.json")).write_text(json.dumps(out, ensure_ascii=False, indent=1))
+    (X2A / "score" / "tost.json").write_text(json.dumps(out, ensure_ascii=False, indent=1))
 
 
 def score_b():
