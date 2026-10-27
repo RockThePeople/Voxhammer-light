@@ -77,6 +77,8 @@ VoxHammer-light 논문 실험(X-paper)의 캡처와 표다. 이 문서는 **사�
   - 모험가 0.862 / 0.999 / 0.988
 - 비교 기준은 각 경로의 출발점이다. 경로마다 1회 실행(반복 없음)이라 통계 검정은 하지 않았다.
 
+- 소요 시간(최초 생성 + 회차 15개, 단계별 초): [tables/10_X3_회차별_소요시간.md](tables/10_X3_회차별_소요시간.md). P0 는 다른 GPU 작업과 겹친 회차가 많아 표시를 확인한다.
+
 ### 알아둘 사례
 
 - **오두막 5회차 굴뚝 제거 실패:** [sheets/x3_cottage_r5_chimney.png](sheets/x3_cottage_r5_chimney.png)
@@ -231,6 +233,6 @@ x2b/<건>/{original, p0, p1}/, cond/
 eval/                                                         사람 평가
 sheets/                                                       라벨 붙은 비교 격자(먼저 볼 것)
 img/                                                          보고서 그림 원본
-tables/                                                       요약 표 CSV, raw/ 원값 JSON
+tables/                                                       요약 표 CSV, raw/ 원값 JSON, 10_X3_회차별_소요시간.md(단계별 초)
 MANIFEST.md, SHA256SUMS, cameras.json                         기술 기록
 ```
