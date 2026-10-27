@@ -106,7 +106,7 @@
 |---|---|---|
 | `x3/<자산>/{original/r0, p0, p1, p2}/r<k>/` | X3 연속 5회 편집(P1·P2 = 봉합본), `cond/r<k>/<경로>/` 조건 이미지·prompt.txt | 4절, 요약 S1·S2 |
 | `stitch/<자산>/{p1,p2}_prestitch/`, `stitch/jeep/{p1_skirt, p1_stitch_skirt, p1_fulldecode}/` | 봉합 전·치마 벽 시험·통째 디코딩 | 10·10-1절 |
-| `x4/<자산>/{p0/r0–r5, p1/r1-5}/` | 무편집 재등록(P1 r1–r5 는 같은 메시라 1회) | 2절, 요약 S5 |
+| `x4/<자산>/{p0/r0–r5, p1/r1-5}/` | 무편집 재등록(P1 r1–r5 는 같은 SLat 재디코딩이라 1회) | 2절, 요약 S5 |
 | `x0/<시나리오>/{original, base25/r1, c15_glb/r1, c15_cbin/r1}/` | X0 r1(c15_cbin = R4 + 봉합, 채택본) | 3절, 요약 S4 |
 | `x2a/<시나리오>/{original, p0/r1–r2, p1_glb/r1–r3, p1_cbin/r1–r3}/`, `cond/` | X2-A, 동결 조건 이미지 | 5절, 요약 S6 |
 | `x2b/<건>/{original, p0, p1}/`, `cond/` | X2-B, 사용한 조건 이미지(데이터셋 2D 또는 FLUX) | 요약 S7 |
@@ -263,77 +263,77 @@
 | x4 | `x4/moto/p0/r3` | `$RUNS_DIR/paper/x4/p0/moto/r3/output.glb` | n | `cbd975c4b1951a17…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/moto/p0/r4` | `$RUNS_DIR/paper/x4/p0/moto/r4/output.glb` | n | `4104f9d54df0cfe8…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/moto/p0/r5` | `$RUNS_DIR/paper/x4/p0/moto/r5/output.glb` | n | `f0ac90da084ba44a…` | P0 to_glb(N 좌표, x4_score 와 같음) |
-| x4 | `x4/moto/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/moto/r1/output.glb` | raw + (iv) | `4e7ffe2ef0134fb8…` | P1 view.glb(r1–r5 같은 메시) |
+| x4 | `x4/moto/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/moto/r1/output.glb` | raw + (iv) | `4e7ffe2ef0134fb8…` | P1 view.glb(r1–r5 같은 SLat 재디코딩, 1회 촬영) |
 | x4 | `x4/snowman/p0/r0` | `$ASSETS_DIR/track_a/snowman/gen/model.glb` | v0 | `e072dca0f94291d6…` | 원본(r0) |
 | x4 | `x4/snowman/p0/r1` | `$RUNS_DIR/paper/x4/p0/snowman/r1/output.glb` | n | `e8f718128abc8c35…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/snowman/p0/r2` | `$RUNS_DIR/paper/x4/p0/snowman/r2/output.glb` | n | `12d3ce82e303646e…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/snowman/p0/r3` | `$RUNS_DIR/paper/x4/p0/snowman/r3/output.glb` | n | `5158e3d05503be4b…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/snowman/p0/r4` | `$RUNS_DIR/paper/x4/p0/snowman/r4/output.glb` | n | `fa98c6de31577c65…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/snowman/p0/r5` | `$RUNS_DIR/paper/x4/p0/snowman/r5/output.glb` | n | `8cbce56676b0b708…` | P0 to_glb(N 좌표, x4_score 와 같음) |
-| x4 | `x4/snowman/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/snowman/r1/output.glb` | raw + (iv) | `23c62840a82e7f58…` | P1 view.glb(r1–r5 같은 메시) |
+| x4 | `x4/snowman/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/snowman/r1/output.glb` | raw + (iv) | `23c62840a82e7f58…` | P1 view.glb(r1–r5 같은 SLat 재디코딩, 1회 촬영) |
 | x4 | `x4/chair/p0/r0` | `$ASSETS_DIR/track_a/chair/gen/model.glb` | v0 | `67595c621826fee7…` | 원본(r0) |
 | x4 | `x4/chair/p0/r1` | `$RUNS_DIR/paper/x4/p0/chair/r1/output.glb` | n | `5890e7a22030801f…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/chair/p0/r2` | `$RUNS_DIR/paper/x4/p0/chair/r2/output.glb` | n | `4c235ecff3c612a1…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/chair/p0/r3` | `$RUNS_DIR/paper/x4/p0/chair/r3/output.glb` | n | `37fc3e63faf438c7…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/chair/p0/r4` | `$RUNS_DIR/paper/x4/p0/chair/r4/output.glb` | n | `965b0ed781fdbff8…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/chair/p0/r5` | `$RUNS_DIR/paper/x4/p0/chair/r5/output.glb` | n | `71cdbe0db5d65211…` | P0 to_glb(N 좌표, x4_score 와 같음) |
-| x4 | `x4/chair/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/chair/r1/output.glb` | raw + (iv) | `0ffc306dcac60a4b…` | P1 view.glb(r1–r5 같은 메시) |
+| x4 | `x4/chair/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/chair/r1/output.glb` | raw + (iv) | `0ffc306dcac60a4b…` | P1 view.glb(r1–r5 같은 SLat 재디코딩, 1회 촬영) |
 | x4 | `x4/B1/p0/r0` | `$ASSETS_DIR/Edit3D-Bench/data/GSO/RJ_Rabbit_Easter_Basket_Blue/source_model/model.glb` | v0 | `2216fce000dd0910…` | 원본(r0) |
 | x4 | `x4/B1/p0/r1` | `$RUNS_DIR/paper/x4/p0/B1/r1/output.glb` | n | `2b3c8f553400ad38…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B1/p0/r2` | `$RUNS_DIR/paper/x4/p0/B1/r2/output.glb` | n | `b5192ed855346d3b…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B1/p0/r3` | `$RUNS_DIR/paper/x4/p0/B1/r3/output.glb` | n | `dd57e5a3b1dabbda…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B1/p0/r4` | `$RUNS_DIR/paper/x4/p0/B1/r4/output.glb` | n | `091047ee9ae94283…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B1/p0/r5` | `$RUNS_DIR/paper/x4/p0/B1/r5/output.glb` | n | `a46ef8066450729b…` | P0 to_glb(N 좌표, x4_score 와 같음) |
-| x4 | `x4/B1/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B1/r1/output.glb` | raw + (iv) | `a08513da82d998d8…` | P1 view.glb(r1–r5 같은 메시) |
+| x4 | `x4/B1/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B1/r1/output.glb` | raw + (iv) | `a08513da82d998d8…` | P1 view.glb(r1–r5 같은 SLat 재디코딩, 1회 촬영) |
 | x4 | `x4/B2/p0/r0` | `$ASSETS_DIR/Edit3D-Bench/data/PartObjaverse-Tiny/0c4e4a0b2a374553ae762bb33e8dd2d0/source_model/model.glb` | v0 | `d9f6045824219335…` | 원본(r0) |
 | x4 | `x4/B2/p0/r1` | `$RUNS_DIR/paper/x4/p0/B2/r1/output.glb` | n | `0009d93916e050cf…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B2/p0/r2` | `$RUNS_DIR/paper/x4/p0/B2/r2/output.glb` | n | `f0c644853c57d0b0…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B2/p0/r3` | `$RUNS_DIR/paper/x4/p0/B2/r3/output.glb` | n | `22bad20f3469aeca…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B2/p0/r4` | `$RUNS_DIR/paper/x4/p0/B2/r4/output.glb` | n | `be586afd06b9bbd6…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B2/p0/r5` | `$RUNS_DIR/paper/x4/p0/B2/r5/output.glb` | n | `c7b56022f4a73273…` | P0 to_glb(N 좌표, x4_score 와 같음) |
-| x4 | `x4/B2/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B2/r1/output.glb` | raw + (iv) | `8b6ac6197ed66833…` | P1 view.glb(r1–r5 같은 메시) |
+| x4 | `x4/B2/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B2/r1/output.glb` | raw + (iv) | `8b6ac6197ed66833…` | P1 view.glb(r1–r5 같은 SLat 재디코딩, 1회 촬영) |
 | x4 | `x4/B3/p0/r0` | `$ASSETS_DIR/Edit3D-Bench/data/GSO/SpiderMan_Titan_Hero_12Inch_Action_Figure_5Hnn4mtkFsP/source_model/model.glb` | v0 | `8b33108dcdf66441…` | 원본(r0) |
 | x4 | `x4/B3/p0/r1` | `$RUNS_DIR/paper/x4/p0/B3/r1/output.glb` | n | `3f29072348d7cdea…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B3/p0/r2` | `$RUNS_DIR/paper/x4/p0/B3/r2/output.glb` | n | `3d8b224d01fd1c42…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B3/p0/r3` | `$RUNS_DIR/paper/x4/p0/B3/r3/output.glb` | n | `c1df49f2a65dd896…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B3/p0/r4` | `$RUNS_DIR/paper/x4/p0/B3/r4/output.glb` | n | `71832549c757f86b…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B3/p0/r5` | `$RUNS_DIR/paper/x4/p0/B3/r5/output.glb` | n | `211ba3af221c90f1…` | P0 to_glb(N 좌표, x4_score 와 같음) |
-| x4 | `x4/B3/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B3/r1/output.glb` | raw + (iv) | `3995b05722e09512…` | P1 view.glb(r1–r5 같은 메시) |
+| x4 | `x4/B3/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B3/r1/output.glb` | raw + (iv) | `3995b05722e09512…` | P1 view.glb(r1–r5 같은 SLat 재디코딩, 1회 촬영) |
 | x4 | `x4/B4/p0/r0` | `$ASSETS_DIR/Edit3D-Bench/data/PartObjaverse-Tiny/dcf35ae14df947a9a700b8bcff8db57f/source_model/model.glb` | v0 | `0d431158b0695c2d…` | 원본(r0) |
 | x4 | `x4/B4/p0/r1` | `$RUNS_DIR/paper/x4/p0/B4/r1/output.glb` | n | `cacae0528502f3d2…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B4/p0/r2` | `$RUNS_DIR/paper/x4/p0/B4/r2/output.glb` | n | `f902e88385a77a31…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B4/p0/r3` | `$RUNS_DIR/paper/x4/p0/B4/r3/output.glb` | n | `281f21c9029b6134…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B4/p0/r4` | `$RUNS_DIR/paper/x4/p0/B4/r4/output.glb` | n | `1db1da70ec273d84…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B4/p0/r5` | `$RUNS_DIR/paper/x4/p0/B4/r5/output.glb` | n | `1734ac353785f2e7…` | P0 to_glb(N 좌표, x4_score 와 같음) |
-| x4 | `x4/B4/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B4/r1/output.glb` | raw + (iv) | `834cdba14951f4d3…` | P1 view.glb(r1–r5 같은 메시) |
+| x4 | `x4/B4/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B4/r1/output.glb` | raw + (iv) | `834cdba14951f4d3…` | P1 view.glb(r1–r5 같은 SLat 재디코딩, 1회 촬영) |
 | x4 | `x4/B5/p0/r0` | `$ASSETS_DIR/Edit3D-Bench/data/GSO/Squirtin_Barnyard_Friends_4pk/source_model/model.glb` | v0 | `9fa2730506afa339…` | 원본(r0) |
 | x4 | `x4/B5/p0/r1` | `$RUNS_DIR/paper/x4/p0/B5/r1/output.glb` | n | `de0249dad302ec7b…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B5/p0/r2` | `$RUNS_DIR/paper/x4/p0/B5/r2/output.glb` | n | `16c26f0e33a02424…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B5/p0/r3` | `$RUNS_DIR/paper/x4/p0/B5/r3/output.glb` | n | `8854949fa8852887…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B5/p0/r4` | `$RUNS_DIR/paper/x4/p0/B5/r4/output.glb` | n | `f6723dbf55bf5d4a…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B5/p0/r5` | `$RUNS_DIR/paper/x4/p0/B5/r5/output.glb` | n | `720ab57a858a420b…` | P0 to_glb(N 좌표, x4_score 와 같음) |
-| x4 | `x4/B5/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B5/r1/output.glb` | raw + (iv) | `7c4b5b0d9d966dfc…` | P1 view.glb(r1–r5 같은 메시) |
+| x4 | `x4/B5/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B5/r1/output.glb` | raw + (iv) | `7c4b5b0d9d966dfc…` | P1 view.glb(r1–r5 같은 SLat 재디코딩, 1회 촬영) |
 | x4 | `x4/B6/p0/r0` | `$ASSETS_DIR/Edit3D-Bench/data/PartObjaverse-Tiny/97582e1d16f6471bac014081535c26ad/source_model/model.glb` | v0 | `a0b1d50d5c781ba7…` | 원본(r0) |
 | x4 | `x4/B6/p0/r1` | `$RUNS_DIR/paper/x4/p0/B6/r1/output.glb` | n | `bd7b8dc4b9be7148…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B6/p0/r2` | `$RUNS_DIR/paper/x4/p0/B6/r2/output.glb` | n | `16878a2eded587fa…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B6/p0/r3` | `$RUNS_DIR/paper/x4/p0/B6/r3/output.glb` | n | `ed539a1e948013c4…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B6/p0/r4` | `$RUNS_DIR/paper/x4/p0/B6/r4/output.glb` | n | `24cb760a5d89014b…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B6/p0/r5` | `$RUNS_DIR/paper/x4/p0/B6/r5/output.glb` | n | `e52ca83d3b3e9246…` | P0 to_glb(N 좌표, x4_score 와 같음) |
-| x4 | `x4/B6/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B6/r1/output.glb` | raw + (iv) | `ad1677ff3723d0dc…` | P1 view.glb(r1–r5 같은 메시) |
+| x4 | `x4/B6/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B6/r1/output.glb` | raw + (iv) | `ad1677ff3723d0dc…` | P1 view.glb(r1–r5 같은 SLat 재디코딩, 1회 촬영) |
 | x4 | `x4/B7/p0/r0` | `$ASSETS_DIR/Edit3D-Bench/data/GSO/3D_Dollhouse_TablePurple/source_model/model.glb` | v0 | `8afad6ac7d16aa6f…` | 원본(r0) |
 | x4 | `x4/B7/p0/r1` | `$RUNS_DIR/paper/x4/p0/B7/r1/output.glb` | n | `61b811c2c0820eb8…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B7/p0/r2` | `$RUNS_DIR/paper/x4/p0/B7/r2/output.glb` | n | `f35f6a4353eb4c0a…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B7/p0/r3` | `$RUNS_DIR/paper/x4/p0/B7/r3/output.glb` | n | `004c5822d0879370…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B7/p0/r4` | `$RUNS_DIR/paper/x4/p0/B7/r4/output.glb` | n | `4b4bd78f78565fe0…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B7/p0/r5` | `$RUNS_DIR/paper/x4/p0/B7/r5/output.glb` | n | `e8aba2c23825e9a5…` | P0 to_glb(N 좌표, x4_score 와 같음) |
-| x4 | `x4/B7/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B7/r1/output.glb` | raw + (iv) | `8629ff713e882369…` | P1 view.glb(r1–r5 같은 메시) |
+| x4 | `x4/B7/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B7/r1/output.glb` | raw + (iv) | `8629ff713e882369…` | P1 view.glb(r1–r5 같은 SLat 재디코딩, 1회 촬영) |
 | x4 | `x4/B8/p0/r0` | `$ASSETS_DIR/Edit3D-Bench/data/PartObjaverse-Tiny/5fb5b1704b464f5c94b667f1b630bb39/source_model/model.glb` | v0 | `3190d9403dc02279…` | 원본(r0) |
 | x4 | `x4/B8/p0/r1` | `$RUNS_DIR/paper/x4/p0/B8/r1/output.glb` | n | `c422bed335122fc2…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B8/p0/r2` | `$RUNS_DIR/paper/x4/p0/B8/r2/output.glb` | n | `95e636facd030f5b…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B8/p0/r3` | `$RUNS_DIR/paper/x4/p0/B8/r3/output.glb` | n | `77e2c5b09b16b08e…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B8/p0/r4` | `$RUNS_DIR/paper/x4/p0/B8/r4/output.glb` | n | `4100237f5978bb55…` | P0 to_glb(N 좌표, x4_score 와 같음) |
 | x4 | `x4/B8/p0/r5` | `$RUNS_DIR/paper/x4/p0/B8/r5/output.glb` | n | `0a8ac81408612360…` | P0 to_glb(N 좌표, x4_score 와 같음) |
-| x4 | `x4/B8/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B8/r1/output.glb` | raw + (iv) | `6a9b8a2ec9a68d76…` | P1 view.glb(r1–r5 같은 메시) |
+| x4 | `x4/B8/p1/r1-5` | `$RUNS_DIR/paper/x4/p1/B8/r1/output.glb` | raw + (iv) | `6a9b8a2ec9a68d76…` | P1 view.glb(r1–r5 같은 SLat 재디코딩, 1회 촬영) |
 | x0 | `x0/A-M1/original` | `$ASSETS_DIR/track_a/moto/gen/model.glb` | v0 | `ea993b04070bdcfe…` | 원본 v0 |
 | x0 | `x0/A-M1/base25/r1` | `$RUNS_DIR/01-port/track_a-A-M1/port-r1/output.glb` | raw | `d2cc038ff0d028c6…` | 25 스텝 to_glb(0-1 이식본 r1) |
 | x0 | `x0/A-M1/c15_glb/r1` | `$RUNS_DIR/2026-10-25/track_a-A-M1/e2a-c15/r1/output.glb` | raw | `354ca8f4d16dc075…` | 15 스텝 to_glb(E2a c15 r1) |

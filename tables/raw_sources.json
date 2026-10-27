@@ -83,5 +83,20 @@
   "file": "raw/x3_eval_blind_key.json",
   "source": "$RUNS_DIR/paper/x3/blind_key.json",
   "source_sha256": "049ea863a2977b09155df25ed55d285efb72c59c3e672e57e6700dab0d2bd066"
+ },
+ {
+  "file": "raw/x2a_tost_11cases.json",
+  "source": "$RUNS_DIR/paper/x2a/score/tost_11cases.json",
+  "source_sha256": "eb62468b7900d0b9d343d47934f8f303b8678faef6f9a9974c33d62bf2f6d4d6"
+ },
+ {
+  "file": "raw/x2a_tost_11cases_A3.json",
+  "source": "$RUNS_DIR/paper/x2a/score/tost_11cases_A3.json",
+  "source_sha256": "0c46b376b15a650bfe2b72baf05c587a8fd0cacb285b37b6dc96ec8151328366"
+ },
+ {
+  "file": "raw/x2a_tost_11cases_B8.json",
+  "source": "$RUNS_DIR/paper/x2a/score/tost_11cases_B8.json",
+  "source_sha256": "d0e97ad28f59be6e23c61e34045b8232f3717c97493fefe95b118d073bbecf88"
  }
 ]
