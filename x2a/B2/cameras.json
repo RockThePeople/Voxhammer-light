@@ -1,0 +1,128 @@
+{
+ "note": "Bench/포크 카메라 정의(반지름 1.8, 원점 주시, 렌즈 35 mm·센서 32 mm). az = Bench 방위(°, Blender 방위 = az − 90). 좌표 = 자산 v0 bbox 정규화 N. 캐릭터 = 정면(방위 = front_az, 고도 10°), 사물 = 3/4 정면(방위 = front_az + 45°, 고도 25°). 정면은 원본 r0 8방향 시트(고도 10°)에서 정했다.",
+ "radius": 1.8,
+ "lens_mm": 35,
+ "sensor_mm": 32,
+ "resolution": 1024,
+ "assets": {
+  "moto": {
+   "class": "object",
+   "front_az": 0,
+   "elev": 25,
+   "az": 45,
+   "front_reason": "전조등·라이더 정면"
+  },
+  "snowman": {
+   "class": "character",
+   "front_az": 180,
+   "elev": 10,
+   "az": 180,
+   "front_reason": "얼굴·당근 코"
+  },
+  "chair": {
+   "class": "object",
+   "front_az": 0,
+   "elev": 25,
+   "az": 45,
+   "front_reason": "좌석 정면"
+  },
+  "jeep": {
+   "class": "object",
+   "front_az": 0,
+   "elev": 25,
+   "az": 45,
+   "front_reason": "그릴"
+  },
+  "cottage": {
+   "class": "object",
+   "front_az": 90,
+   "elev": 25,
+   "az": 135,
+   "front_reason": "현관문"
+  },
+  "adventurer": {
+   "class": "character",
+   "front_az": 45,
+   "elev": 10,
+   "az": 45,
+   "front_reason": "얼굴 정면(X3 마스크 작업의 포크 시점 1)"
+  },
+  "B1": {
+   "class": "object",
+   "front_az": 0,
+   "elev": 25,
+   "az": 45,
+   "front_reason": "바구니 앞면"
+  },
+  "B2": {
+   "class": "object",
+   "front_az": 0,
+   "elev": 25,
+   "az": 45,
+   "front_reason": "디저트 앞면"
+  },
+  "B3": {
+   "class": "character",
+   "front_az": 0,
+   "elev": 10,
+   "az": 0,
+   "front_reason": "얼굴"
+  },
+  "B4": {
+   "class": "object",
+   "front_az": 45,
+   "elev": 25,
+   "az": 90,
+   "front_reason": "선풍기 날개 면"
+  },
+  "B5": {
+   "class": "object",
+   "front_az": 0,
+   "elev": 25,
+   "az": 45,
+   "front_reason": "동물들이 보는 쪽"
+  },
+  "B6": {
+   "class": "character",
+   "front_az": 0,
+   "elev": 10,
+   "az": 0,
+   "front_reason": "얼굴"
+  },
+  "B7": {
+   "class": "object",
+   "front_az": 0,
+   "elev": 25,
+   "az": 45,
+   "front_reason": "탁자(대칭, 방위 0)"
+  },
+  "B8": {
+   "class": "object",
+   "front_az": 0,
+   "elev": 25,
+   "az": 45,
+   "front_reason": "탑 문"
+  },
+  "X2B-1": {
+   "class": "character",
+   "front_az": 0,
+   "elev": 10,
+   "az": 0,
+   "front_reason": "얼굴"
+  },
+  "X2B-2": {
+   "class": "object",
+   "front_az": 0,
+   "elev": 25,
+   "az": 45,
+   "front_reason": "램프(대칭, 방위 0)"
+  },
+  "X2B-3": {
+   "class": "character",
+   "front_az": 0,
+   "elev": 10,
+   "az": 0,
+   "front_reason": "얼굴"
+  }
+ }
+}
