@@ -169,6 +169,7 @@ def manifest(out, info):
     b = {e: json.loads((out / "_build" / f"{e}.json").read_text()) for e in ("x3", "stitch", "x4", "x0", "x2a", "x2b") if (out / "_build" / f"{e}.json").exists()}
     commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip()
     L = ["# paper-results — 논문 캡처·표 (X-paper, a5000)", "",
+         "> 사진을 어떤 기준으로 비교해 보는지는 [README.md](README.md)(안내서)에 있다.", "",
          f"생성: `tools/paper/capture/{{capture,bpy_render,build,finish}}.py`, 저장소 `item/X-paper-a5000` 커밋 `{commit}`. 새 편집·새 채점 없음 — 보고서 `0531459` 기준 기존 출력만 다시 찍었다.", "",
          "## 렌더 설정", "",
          "- 렌더러: Blender Cycles(Edit3D-Bench `render.py` 와 같은 bpyrenderer 설정 — 64 샘플, 디노이즈, 확산·광택 반사 1회), GPU(OptiX). 1024×1024.",
@@ -179,7 +180,7 @@ def manifest(out, info):
          "- P1·P2(정점색 R4 메시)는 output.glb 를 N 좌표로 옮긴 뒤 (iv) 보정(`editcore/render.py:vertex_color_render_glb`) — view.glb 와 같은 보정이다. view.glb 를 trimesh 로 옮기면 보정 재질·선형 float 정점색이 빠져 검게 나와서 이렇게 했다. P0 는 to_glb 출력.", "",
          "## 카메라·좌표", "",
          "- 카메라: Bench/포크 정의 — 반지름 1.8, 원점 주시, 렌즈 35 mm·센서 32 mm. az = Bench 방위(Blender 방위 = az − 90°). 정면은 원본 r0 의 고도 10° 8방향 렌더에서 정했다(cameras.json).",
-         "- 캐릭터 = 정면(az = 정면, 고도 10°), 사물 = 3/4 정면(az = 정면 + 45°, 고도 25°). 모든 경로·회차·실행에 같은 카메라.",
+         "- 캐릭터 = 정면(az = 정면, 고도 10°), 사물 = 3/4 정면(az = 정면 + 45°, 고도 25°). 예외: 오두막은 정면 − 45°(az 45) — 왼쪽 벽 창(r2)·굴뚝(r5)·정면 창 아래 꽃상자(r3)가 한 시점에 보이도록(사용자 10-27; 정면 + 45° 에서는 r2 창이 옆벽에 가려졌다). 모든 경로·회차·실행에 같은 카메라.",
          "- 좌표: 자산마다 v0 메시 bbox 로 정한 N 좌표(중심 원점, 최대 변 1; `tools/paper_metrics.py` AssetFrame) 하나에 모든 결과를 옮긴다. raw(R4·editcore) → v0: (p − raw_c)·raw_s(트랙 A·X3 gen.json, 트랙 B·X2-B 항등) → N: (p − t0_c)·t0_s.",
          "- P0: X3 = round.json 의 누적 변환 C_k(v0 → 그 회차 입력 좌표)의 역행렬로 v0 에 되돌림(output_v0.glb). X2-A·X2-B = 입력에 건 정규화 T(prep.json) 좌표 = N(같은 v0 bbox 변환). X4 = 채점과 같이 N 으로 본다(회차마다의 재정규화 표류는 되돌리지 않음 — 실루엣 확인 참조).", "",
          "| 자산 | 분류 | 정면 az | 카메라 az | 고도 | 근거 |", "|---|---|---|---|---|---|"]
@@ -252,6 +253,14 @@ def sums(out):
 
 if __name__ == "__main__":
     out = Path(sys.argv[1])
+    if sys.argv[2:] == ["manifest"]:   # 다시 찍은 실험만 반영: 표·평가·그림은 지난 finish.json 그대로, 실루엣·MANIFEST·SHA256SUMS 만 다시
+        info = json.loads((out / "_build" / "finish.json").read_text())
+        info["silhouette_excl"] = silhouette_excl(out)
+        manifest(out, info)
+        info["files"] = sums(out)
+        (out / "_build" / "finish.json").write_text(json.dumps(info, ensure_ascii=False, indent=1))
+        print("finish manifest", {"silhouette_excl": len(info["silhouette_excl"]), "files": info["files"]})
+        sys.exit()
     info = {"tables": tables(out), "eval": evalpage(out), "img": report_imgs(out), "silhouette_excl": silhouette_excl(out)}
     manifest(out, info)
     info["files"] = sums(out)
